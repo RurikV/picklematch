@@ -1,36 +1,16 @@
-# Picklematch
+# picklematch
 
-A simple Node.js application for demonstration purposes.
+PickleMatch Flutter project.
 
-## Installation
+## Getting Started
 
-```bash
-# Clone the repository
-git clone https://github.com/RurikV/picklematch.git
+This project is a starting point for a Flutter application.
 
-# Navigate to the project directory
-cd picklematch
+A few resources to get you started if this is your first Flutter project:
 
-# Install dependencies
-npm install
-```
+- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
+- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
 
-## Usage
-
-```bash
-# Start the application
-npm start
-
-# Run in development mode with auto-reload
-npm run dev
-```
-
-## Scripts
-
-- `npm start` - Run the application
-- `npm run dev` - Run the application with auto-reload
-- `npm test` - Run tests
-
-## License
-
-See the [LICENSE](LICENSE) file for details.
+For help getting started with Flutter development, view the
+[online documentation](https://docs.flutter.dev/), which offers tutorials,
+samples, guidance on mobile development, and a full API reference.
