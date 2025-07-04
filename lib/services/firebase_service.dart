@@ -134,7 +134,21 @@ class FirebaseService {
   }
 
   Future<void> setUserActive(String uid, bool active) async {
-    await _firestore.collection('users').doc(uid).update({'active': active});
+    try {
+      // Check if user is authenticated
+      if (_auth.currentUser == null) {
+        print('FirebaseService: No authenticated user, cannot set user active status');
+        return;
+      }
+
+      print('FirebaseService: Setting user $uid active status to $active');
+      await _firestore.collection('users').doc(uid).update({'active': active});
+      print('FirebaseService: Successfully updated user active status');
+    } catch (e) {
+      print('FirebaseService: Error setting user active status: $e');
+      // Don't rethrow the exception, just log it
+      // This allows the verification process to continue even if Firestore access fails
+    }
   }
 
   Future<Map<String, dynamic>> getAllUsers() async {

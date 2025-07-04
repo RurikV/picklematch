@@ -69,7 +69,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
                   add(LoggedIn(user: user, token: 'firebase-token'));
                 } else {
                   print('AuthBloc: Emitting AuthVerificationNeeded state from Firebase auth');
-                  add(LoggedIn(user: user, token: 'firebase-token'));
+                  emit(AuthVerificationNeeded(user: user, token: 'firebase-token'));
                 }
               }
             }
@@ -146,25 +146,46 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   Future<void> _onVerifyEmailRequested(VerifyEmailRequested event, Emitter<AuthState> emit) async {
+    print('AuthBloc: VerifyEmailRequested event received');
     emit(AuthLoading());
     try {
       final token = await _storageService.getToken();
       final user = await _storageService.getUser();
 
       if (token == null || user == null) {
+        print('AuthBloc: No token or user found, emitting AuthUnauthenticated');
         emit(AuthUnauthenticated());
         return;
       }
 
+      // If user is already active, just emit authenticated state
+      if (user.isActive) {
+        print('AuthBloc: User is already active, emitting AuthAuthenticated directly');
+        emit(AuthAuthenticated(user: user, token: token));
+        return;
+      }
+
+      print('AuthBloc: Calling API service to verify email');
       await _apiService.verifyEmail(token);
+      print('AuthBloc: Email verification completed successfully');
 
       // Update user with active status
+      print('AuthBloc: Updating user with active status');
       final updatedUser = user.copyWith(isActive: true);
       await _storageService.saveUser(updatedUser);
+      print('AuthBloc: User updated and saved to storage');
 
+      // Add a small delay to ensure the UI has time to update
+      print('AuthBloc: Adding delay before emitting success states');
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      print('AuthBloc: Emitting VerificationSuccess state');
       emit(VerificationSuccess(user: updatedUser, token: token));
+
+      print('AuthBloc: Emitting AuthAuthenticated state');
       emit(AuthAuthenticated(user: updatedUser, token: token));
     } catch (e) {
+      print('AuthBloc: Error in verification process: $e');
       emit(VerificationFailure(error: e.toString()));
     }
   }
@@ -174,7 +195,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       print('AuthBloc: Calling API service to login with Google');
       final user = await _apiService.loginWithGoogle();
-      print('AuthBloc: Google Sign-In successful, user: ${user.email}');
+      print('AuthBloc: Google Sign-In successful, user: ${user.email}, isActive: ${user.isActive}');
 
       // In a real app, the token would come from the API
       final token = 'google-token-${DateTime.now().millisecondsSinceEpoch}';
@@ -184,15 +205,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       await _storageService.saveToken(token);
 
       // Add a small delay to ensure the UI has time to update
-      print('AuthBloc: Adding delay before emitting AuthAuthenticated state');
+      print('AuthBloc: Adding delay before emitting state');
       await Future.delayed(const Duration(milliseconds: 500));
 
-      print('AuthBloc: Emitting AuthAuthenticated state');
-      emit(AuthAuthenticated(user: user, token: token));
-      print('AuthBloc: AuthAuthenticated state emitted');
+      // Check if user is active
+      if (user.isActive) {
+        print('AuthBloc: User is active, emitting AuthAuthenticated state');
+        emit(AuthAuthenticated(user: user, token: token));
+        print('AuthBloc: AuthAuthenticated state emitted');
+      } else {
+        print('AuthBloc: User is not active, emitting AuthVerificationNeeded state');
+        emit(AuthVerificationNeeded(user: user, token: token));
+        print('AuthBloc: AuthVerificationNeeded state emitted');
+      }
 
-      // Force navigation to HomeScreen
-      print('AuthBloc: Forcing navigation to HomeScreen');
+      // Force navigation based on user state
+      print('AuthBloc: Forcing navigation based on user state');
       // This is handled by the BlocListener in LoginScreen and the BlocBuilder in AppNavigator
     } catch (e) {
       print('AuthBloc: Google Sign-In failed: $e');
@@ -206,7 +234,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       print('AuthBloc: Calling API service to login with Facebook');
       final user = await _apiService.loginWithFacebook();
-      print('AuthBloc: Facebook Sign-In successful, user: ${user.email}');
+      print('AuthBloc: Facebook Sign-In successful, user: ${user.email}, isActive: ${user.isActive}');
 
       // In a real app, the token would come from the API
       final token = 'facebook-token-${DateTime.now().millisecondsSinceEpoch}';
@@ -216,15 +244,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       await _storageService.saveToken(token);
 
       // Add a small delay to ensure the UI has time to update
-      print('AuthBloc: Adding delay before emitting AuthAuthenticated state');
+      print('AuthBloc: Adding delay before emitting state');
       await Future.delayed(const Duration(milliseconds: 500));
 
-      print('AuthBloc: Emitting AuthAuthenticated state');
-      emit(AuthAuthenticated(user: user, token: token));
-      print('AuthBloc: AuthAuthenticated state emitted');
+      // Check if user is active
+      if (user.isActive) {
+        print('AuthBloc: User is active, emitting AuthAuthenticated state');
+        emit(AuthAuthenticated(user: user, token: token));
+        print('AuthBloc: AuthAuthenticated state emitted');
+      } else {
+        print('AuthBloc: User is not active, emitting AuthVerificationNeeded state');
+        emit(AuthVerificationNeeded(user: user, token: token));
+        print('AuthBloc: AuthVerificationNeeded state emitted');
+      }
 
-      // Force navigation to HomeScreen
-      print('AuthBloc: Forcing navigation to HomeScreen');
+      // Force navigation based on user state
+      print('AuthBloc: Forcing navigation based on user state');
       // This is handled by the BlocListener in LoginScreen and the BlocBuilder in AppNavigator
     } catch (e) {
       print('AuthBloc: Facebook Sign-In failed: $e');
