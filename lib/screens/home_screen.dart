@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/auth/auth_bloc.dart';
-import '../bloc/auth/auth_event.dart';
-import '../bloc/auth/auth_state.dart';
 import '../bloc/game/game_bloc.dart';
 import '../bloc/game/game_event.dart';
 import '../bloc/game/game_state.dart';
@@ -48,9 +45,6 @@ class _HomeScreenState extends State<HomeScreen> {
     context.read<GameBloc>().add(SetSelectedLocation(locationId: locationId));
   }
 
-  void _logout() {
-    context.read<AuthBloc>().add(LoggedOut());
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,11 +57,6 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: EdgeInsets.symmetric(horizontal: 8.0),
               child: Icon(Icons.battery_saver),
             ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _logout,
-            tooltip: 'Logout',
-          ),
         ],
       ),
       body: BlocBuilder<GameBloc, GameState>(
@@ -184,21 +173,6 @@ class _HomeScreenState extends State<HomeScreen> {
           } else {
             return const Center(child: CircularProgressIndicator());
           }
-        },
-      ),
-      floatingActionButton: BlocBuilder<AuthBloc, AuthState>(
-        builder: (context, state) {
-          if (state is AuthAuthenticated && state.user.role == 'admin') {
-            return FloatingActionButton(
-              onPressed: () {
-                // Navigate to create game screen
-                // This will be implemented later
-              },
-              tooltip: 'Create Game',
-              child: const Icon(Icons.add),
-            );
-          }
-          return const SizedBox.shrink();
         },
       ),
     );

@@ -5,9 +5,9 @@ import 'package:picklematch/bloc/auth/auth_bloc.dart';
 import 'package:picklematch/bloc/auth/auth_event.dart';
 import 'package:picklematch/bloc/auth/auth_state.dart';
 import 'package:picklematch/bloc/game/game_bloc.dart';
-import 'package:picklematch/screens/home_screen.dart';
 import 'package:picklematch/screens/login_screen.dart';
 import 'package:picklematch/screens/verification_screen.dart';
+import 'screens/main_navigation_screen.dart';
 import 'package:picklematch/services/api_service.dart';
 import 'package:picklematch/services/storage_service.dart';
 
@@ -101,8 +101,8 @@ class AppNavigator extends StatelessWidget {
             ),
           );
         } else if (state is AuthAuthenticated) {
-          print('AppNavigator: Navigating to HomeScreen for AuthAuthenticated state');
-          return const HomeScreen();
+          print('AppNavigator: Navigating to MainNavigationScreen for AuthAuthenticated state');
+          return const MainNavigationScreen();
         } else if (state is AuthVerificationNeeded) {
           print('AppNavigator: Navigating to VerificationScreen for AuthVerificationNeeded state');
           return const VerificationScreen();
