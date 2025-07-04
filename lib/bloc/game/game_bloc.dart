@@ -66,10 +66,21 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       if (selectedLocationId != null) await _storageService.saveSelectedLocationId(selectedLocationId);
 
       print('GameBloc: Emitting GamesLoaded state with ${locations.length} locations');
+
+      // Ensure selectedLocationId exists in the locations list
+      String? validLocationId = selectedLocationId;
+      if (selectedLocationId != null) {
+        bool locationExists = locations.any((location) => location.id == selectedLocationId);
+        if (!locationExists) {
+          print('GameBloc: Selected location ID $selectedLocationId not found in locations, setting to null');
+          validLocationId = null;
+        }
+      }
+
       emit(GamesLoaded(
         games: games,
         selectedDate: selectedDate,
-        selectedLocationId: selectedLocationId,
+        selectedLocationId: validLocationId,
         locations: locations,
       ));
     } catch (e) {
@@ -86,10 +97,21 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         print('GameBloc: Cache locations: ${locations.map((loc) => loc.name).join(', ')}');
 
         print('GameBloc: Emitting GamesLoaded state with cached data');
+
+        // Ensure selectedLocationId exists in the locations list (for cached data too)
+        String? validLocationId = selectedLocationId;
+        if (selectedLocationId != null) {
+          bool locationExists = locations.any((location) => location.id == selectedLocationId);
+          if (!locationExists) {
+            print('GameBloc: Cached selected location ID $selectedLocationId not found in locations, setting to null');
+            validLocationId = null;
+          }
+        }
+
         emit(GamesLoaded(
           games: games,
           selectedDate: selectedDate,
-          selectedLocationId: selectedLocationId,
+          selectedLocationId: validLocationId,
           locations: locations,
         ));
       } catch (cacheError) {

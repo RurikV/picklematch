@@ -64,95 +64,99 @@ class _HomeScreenState extends State<HomeScreen> {
           if (state is GameLoading) {
             return const Center(child: CircularProgressIndicator());
           } else if (state is GamesLoaded) {
-            return Column(
-              children: [
-                // Power saving mode banner
-                if (_isPowerSavingMode)
-                  Container(
-                    color: Colors.amber.shade100,
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      children: const [
-                        Icon(Icons.battery_saver, color: Colors.amber),
-                        SizedBox(width: 8.0),
-                        Expanded(
-                          child: Text(
-                            'Power saving mode is enabled. Some features may be limited.',
-                            style: TextStyle(color: Colors.black87),
+            return SafeArea(
+              child: Column(
+                children: [
+                  // Power saving mode banner
+                  if (_isPowerSavingMode)
+                    Container(
+                      color: Colors.amber.shade100,
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        children: const [
+                          Icon(Icons.battery_saver, color: Colors.amber),
+                          SizedBox(width: 8.0),
+                          Expanded(
+                            child: Text(
+                              'Power saving mode is enabled. Some features may be limited.',
+                              style: TextStyle(color: Colors.black87),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                    ),
+
+                  // Date picker
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: DayPicker(
+                      selectedDate: state.selectedDate ?? DateTime.now(),
+                      onDateSelected: _onDateSelected,
                     ),
                   ),
 
-                // Date picker
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: DayPicker(
-                    selectedDate: state.selectedDate ?? DateTime.now(),
-                    onDateSelected: _onDateSelected,
-                  ),
-                ),
+                  // Location selector
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    child: Builder(
+                      builder: (context) {
+                        print('HomeScreen: Building location dropdown with ${state.locations.length} locations');
+                        print('HomeScreen: Locations: ${state.locations.map((loc) => loc.name).join(', ')}');
+                        print('HomeScreen: Selected location ID: ${state.selectedLocationId}');
 
-                // Location selector
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Builder(
-                    builder: (context) {
-                      print('HomeScreen: Building location dropdown with ${state.locations.length} locations');
-                      print('HomeScreen: Locations: ${state.locations.map((loc) => loc.name).join(', ')}');
-                      print('HomeScreen: Selected location ID: ${state.selectedLocationId}');
-
-                      return DropdownButtonFormField<String>(
-                        decoration: const InputDecoration(
-                          labelText: 'Location',
-                          border: OutlineInputBorder(),
-                        ),
-                        value: state.selectedLocationId,
-                        items: [
-                          const DropdownMenuItem<String>(
-                            value: null,
-                            child: Text('All Locations'),
+                        return DropdownButtonFormField<String>(
+                          decoration: const InputDecoration(
+                            labelText: 'Location',
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
                           ),
-                          ...state.locations.map((location) {
-                            print('HomeScreen: Adding dropdown item for location: ${location.name} (${location.id})');
-                            return DropdownMenuItem<String>(
-                              value: location.id,
-                              child: Text(location.name),
-                            );
-                          }),
-                        ],
-                        onChanged: (value) {
-                          print('HomeScreen: Location dropdown value changed to: $value');
-                          if (value != null) {
-                            _onLocationSelected(value);
-                          } else {
-                            // Handle "All Locations" selection
-                            print('HomeScreen: "All Locations" selected, reloading games');
-                            context.read<GameBloc>().add(const LoadGames());
-                          }
-                        },
-                      );
-                    }
+                          isExpanded: true,
+                          value: state.selectedLocationId,
+                          items: [
+                            const DropdownMenuItem<String>(
+                              value: null,
+                              child: Text('All Locations'),
+                            ),
+                            ...state.locations.map((location) {
+                              print('HomeScreen: Adding dropdown item for location: ${location.name} (${location.id})');
+                              return DropdownMenuItem<String>(
+                                value: location.id,
+                                child: Text(location.name),
+                              );
+                            }),
+                          ],
+                          onChanged: (value) {
+                            print('HomeScreen: Location dropdown value changed to: $value');
+                            if (value != null) {
+                              _onLocationSelected(value);
+                            } else {
+                              // Handle "All Locations" selection
+                              print('HomeScreen: "All Locations" selected, reloading games');
+                              context.read<GameBloc>().add(const LoadGames());
+                            }
+                          },
+                        );
+                      }
+                    ),
                   ),
-                ),
 
-                // Game list
-                Expanded(
-                  child: GameList(
-                    games: state.games,
-                    locations: state.locations,
-                    onGameTap: (game) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => GameDetailScreen(game: game),
-                        ),
-                      );
-                    },
+                  // Game list
+                  Expanded(
+                    child: GameList(
+                      games: state.games,
+                      locations: state.locations,
+                      onGameTap: (game) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => GameDetailScreen(game: game),
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             );
           } else if (state is GameError) {
             return Center(

@@ -15,6 +15,7 @@ class StorageService {
   static const String _selectedDateKey = 'selected_date';
   static const String _selectedLocationIdKey = 'selected_location_id';
   static const String _themeKey = 'theme';
+  static const String _emailForSignInKey = 'email_for_sign_in';
 
   // Singleton pattern
   static final StorageService _instance = StorageService._internal();
@@ -162,6 +163,24 @@ class StorageService {
   Future<String?> getTheme() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_themeKey);
+  }
+
+  // Save email for sign-in with email link
+  Future<void> saveEmailForSignIn(String email) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_emailForSignInKey, email);
+  }
+
+  // Get email for sign-in with email link
+  Future<String?> getEmailForSignIn() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_emailForSignInKey);
+  }
+
+  // Clear email for sign-in
+  Future<void> clearEmailForSignIn() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_emailForSignInKey);
   }
 
   // Clear all data

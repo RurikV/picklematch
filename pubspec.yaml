@@ -50,7 +50,6 @@ dependencies:
 
   # Social Sign-In
   google_sign_in: ^6.2.1
-  flutter_facebook_auth: ^6.0.4
 
   # Utilities
   intl: ^0.19.0
@@ -71,6 +70,7 @@ dev_dependencies:
   mockito: ^5.4.4
   bloc_test: ^9.1.6
   build_runner: ^2.4.8
+
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

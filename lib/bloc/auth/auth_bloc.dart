@@ -23,7 +23,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<RegisterRequested>(_onRegisterRequested);
     on<VerifyEmailRequested>(_onVerifyEmailRequested);
     on<GoogleSignInRequested>(_onGoogleSignInRequested);
-    on<FacebookSignInRequested>(_onFacebookSignInRequested);
+    on<EmailLinkRequested>(_onEmailLinkRequested);
   }
 
   @override
@@ -228,41 +228,26 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  Future<void> _onFacebookSignInRequested(FacebookSignInRequested event, Emitter<AuthState> emit) async {
-    print('AuthBloc: Facebook Sign-In Requested');
+  // Facebook authentication removed as per requirements
+
+  Future<void> _onEmailLinkRequested(EmailLinkRequested event, Emitter<AuthState> emit) async {
+    print('AuthBloc: Email Link Requested for email: ${event.email}');
     emit(AuthLoading());
     try {
-      print('AuthBloc: Calling API service to login with Facebook');
-      final user = await _apiService.loginWithFacebook();
-      print('AuthBloc: Facebook Sign-In successful, user: ${user.email}, isActive: ${user.isActive}');
+      print('AuthBloc: Calling API service to send email link');
+      await _apiService.sendEmailLink(event.email);
+      print('AuthBloc: Email link sent successfully');
 
-      // In a real app, the token would come from the API
-      final token = 'facebook-token-${DateTime.now().millisecondsSinceEpoch}';
+      // Store the email locally for later use when completing the sign-in
+      await _storageService.saveEmailForSignIn(event.email);
 
-      print('AuthBloc: Saving user and token to storage');
-      await _storageService.saveUser(user);
-      await _storageService.saveToken(token);
+      // Emit a success state to show a confirmation message
+      emit(AuthUnauthenticated());
 
-      // Add a small delay to ensure the UI has time to update
-      print('AuthBloc: Adding delay before emitting state');
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      // Check if user is active
-      if (user.isActive) {
-        print('AuthBloc: User is active, emitting AuthAuthenticated state');
-        emit(AuthAuthenticated(user: user, token: token));
-        print('AuthBloc: AuthAuthenticated state emitted');
-      } else {
-        print('AuthBloc: User is not active, emitting AuthVerificationNeeded state');
-        emit(AuthVerificationNeeded(user: user, token: token));
-        print('AuthBloc: AuthVerificationNeeded state emitted');
-      }
-
-      // Force navigation based on user state
-      print('AuthBloc: Forcing navigation based on user state');
-      // This is handled by the BlocListener in LoginScreen and the BlocBuilder in AppNavigator
+      // Show a success message (this will be handled in the UI)
+      print('AuthBloc: Email link sent, user should check their email');
     } catch (e) {
-      print('AuthBloc: Facebook Sign-In failed: $e');
+      print('AuthBloc: Email Link Request failed: $e');
       emit(AuthFailure(error: e.toString()));
     }
   }

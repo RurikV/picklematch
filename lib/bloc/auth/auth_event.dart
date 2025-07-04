@@ -46,4 +46,11 @@ class VerifyEmailRequested extends AuthEvent {}
 
 class GoogleSignInRequested extends AuthEvent {}
 
-class FacebookSignInRequested extends AuthEvent {}
+class EmailLinkRequested extends AuthEvent {
+  final String email;
+
+  const EmailLinkRequested({required this.email});
+
+  @override
+  List<Object?> get props => [email];
+}
