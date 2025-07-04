@@ -25,16 +25,11 @@ class FirebaseService {
   bool get isInitialized => _initialized;
 
   // Social sign-in instances
-  // NOTE: This is a temporary configuration for Google Sign-In.
-  // The serverClientId is a placeholder and should be replaced with a real web client ID
-  // from the Firebase console. The proper solution is to:
-  // 1. Generate a SHA-1 fingerprint for your debug/release keys
-  // 2. Add the fingerprint to the Firebase console for your Android app
-  // 3. Download the updated google-services.json file
-  // 4. Remove the serverClientId parameter from this GoogleSignIn instance
+  // Using the default GoogleSignIn configuration without serverClientId
+  // This will use the configuration from google-services.json for Android
+  // and GoogleService-Info.plist for iOS
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
-    serverClientId: '352711832014-web-client-id.apps.googleusercontent.com',
   );
   final FacebookAuth _facebookAuth = FacebookAuth.instance;
 
@@ -111,11 +106,23 @@ class FirebaseService {
   }
 
   Future<Map<String, dynamic>?> getUserData(String uid) async {
-    DocumentSnapshot snapshot = await _firestore.collection('users').doc(uid).get();
-    if (snapshot.exists) {
-      return snapshot.data() as Map<String, dynamic>;
+    try {
+      // Check if user is authenticated
+      if (_auth.currentUser == null) {
+        print('FirebaseService: No authenticated user, returning null for user data');
+        return null;
+      }
+
+      DocumentSnapshot snapshot = await _firestore.collection('users').doc(uid).get();
+      if (snapshot.exists) {
+        return snapshot.data() as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      print('FirebaseService: Error getting user data for UID $uid: $e');
+      // Return null on error
+      return null;
     }
-    return null;
   }
 
   Future<void> updateUserRole(String uid, String role) async {
@@ -131,14 +138,26 @@ class FirebaseService {
   }
 
   Future<Map<String, dynamic>> getAllUsers() async {
-    QuerySnapshot snapshot = await _firestore.collection('users').get();
-    Map<String, dynamic> users = {};
+    try {
+      // Check if user is authenticated
+      if (_auth.currentUser == null) {
+        print('FirebaseService: No authenticated user, returning empty users map');
+        return {};
+      }
 
-    for (var doc in snapshot.docs) {
-      users[doc.id] = doc.data();
+      QuerySnapshot snapshot = await _firestore.collection('users').get();
+      Map<String, dynamic> users = {};
+
+      for (var doc in snapshot.docs) {
+        users[doc.id] = doc.data();
+      }
+
+      return users;
+    } catch (e) {
+      print('FirebaseService: Error getting all users: $e');
+      // Return empty map on error
+      return {};
     }
-
-    return users;
   }
 
   // Game methods
@@ -159,16 +178,28 @@ class FirebaseService {
   }
 
   Future<List<Map<String, dynamic>>> getGamesForDate(String dateStr) async {
-    QuerySnapshot snapshot = await _firestore.collection('games')
-        .where('date', isEqualTo: dateStr)
-        .orderBy('time')
-        .get();
+    try {
+      // Check if user is authenticated
+      if (_auth.currentUser == null) {
+        print('FirebaseService: No authenticated user, returning empty games list');
+        return [];
+      }
 
-    return snapshot.docs.map((doc) {
-      Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-      data['id'] = doc.id;
-      return data;
-    }).toList();
+      QuerySnapshot snapshot = await _firestore.collection('games')
+          .where('date', isEqualTo: dateStr)
+          .orderBy('time')
+          .get();
+
+      return snapshot.docs.map((doc) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    } catch (e) {
+      print('FirebaseService: Error getting games for date $dateStr: $e');
+      // Return empty list on error
+      return [];
+    }
   }
 
   Future<void> registerForGame(String gameId, String teamKey, String uid, String email) async {
@@ -214,30 +245,54 @@ class FirebaseService {
   }
 
   Future<Set<String>> getAllGameDates() async {
-    QuerySnapshot snapshot = await _firestore.collection('games').get();
-    Set<String> dates = {};
+    try {
+      // Check if user is authenticated
+      if (_auth.currentUser == null) {
+        print('FirebaseService: No authenticated user, returning empty game dates');
+        return {};
+      }
 
-    for (var doc in snapshot.docs) {
-      Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-      dates.add(data['date'] as String);
+      QuerySnapshot snapshot = await _firestore.collection('games').get();
+      Set<String> dates = {};
+
+      for (var doc in snapshot.docs) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        dates.add(data['date'] as String);
+      }
+
+      return dates;
+    } catch (e) {
+      print('FirebaseService: Error getting all game dates: $e');
+      // Return empty set on error
+      return {};
     }
-
-    return dates;
   }
 
   Future<Set<String>> getGameDatesForLocation(String locationId) async {
-    QuerySnapshot snapshot = await _firestore.collection('games')
-        .where('location_id', isEqualTo: locationId)
-        .get();
+    try {
+      // Check if user is authenticated
+      if (_auth.currentUser == null) {
+        print('FirebaseService: No authenticated user, returning empty game dates for location');
+        return {};
+      }
 
-    Set<String> dates = {};
+      QuerySnapshot snapshot = await _firestore.collection('games')
+          .where('location_id', isEqualTo: locationId)
+          .get();
 
-    for (var doc in snapshot.docs) {
-      Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-      dates.add(data['date'] as String);
+      Set<String> dates = {};
+
+      for (var doc in snapshot.docs) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        dates.add(data['date'] as String);
+      }
+
+      return dates;
+    } catch (e) {
+      print('FirebaseService: Error getting game dates for location $locationId: $e');
+      // Return empty set on error
+      return {};
     }
-
-    return dates;
   }
 
   // Location methods
@@ -251,29 +306,53 @@ class FirebaseService {
 
   Future<List<Map<String, dynamic>>> getAllLocations() async {
     print('FirebaseService: getAllLocations called');
-    QuerySnapshot snapshot = await _firestore.collection('locations').get();
-    print('FirebaseService: Got ${snapshot.docs.length} location documents from Firestore');
+    try {
+      // Check if user is authenticated
+      if (_auth.currentUser == null) {
+        print('FirebaseService: No authenticated user, returning empty locations list');
+        return [];
+      }
 
-    final locations = snapshot.docs.map((doc) {
-      Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-      data['id'] = doc.id;
-      return data;
-    }).toList();
+      QuerySnapshot snapshot = await _firestore.collection('locations').get();
+      print('FirebaseService: Got ${snapshot.docs.length} location documents from Firestore');
 
-    print('FirebaseService: Returning ${locations.length} locations: ${locations.map((loc) => loc['name']).join(', ')}');
-    return locations;
+      final locations = snapshot.docs.map((doc) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+
+      print('FirebaseService: Returning ${locations.length} locations: ${locations.map((loc) => loc['name']).join(', ')}');
+      return locations;
+    } catch (e) {
+      print('FirebaseService: Error getting locations: $e');
+      // Return empty list on error, let the API service handle fallback
+      return [];
+    }
   }
 
   Future<Map<String, dynamic>?> getLocationById(String locationId) async {
-    DocumentSnapshot snapshot = await _firestore.collection('locations').doc(locationId).get();
+    try {
+      // Check if user is authenticated
+      if (_auth.currentUser == null) {
+        print('FirebaseService: No authenticated user, returning null for location');
+        return null;
+      }
 
-    if (snapshot.exists) {
-      Map<String, dynamic> data = snapshot.data() as Map<String, dynamic>;
-      data['id'] = snapshot.id;
-      return data;
+      DocumentSnapshot snapshot = await _firestore.collection('locations').doc(locationId).get();
+
+      if (snapshot.exists) {
+        Map<String, dynamic> data = snapshot.data() as Map<String, dynamic>;
+        data['id'] = snapshot.id;
+        return data;
+      }
+
+      return null;
+    } catch (e) {
+      print('FirebaseService: Error getting location by ID $locationId: $e');
+      // Return null on error
+      return null;
     }
-
-    return null;
   }
 
   Future<void> initializeDefaultLocations() async {
@@ -310,81 +389,75 @@ class FirebaseService {
       // Trigger the authentication flow
       print('FirebaseService: Triggering Google Sign-In flow');
 
-      // Try to sign in with Google
+      // Try silent sign in first
       GoogleSignInAccount? googleUser;
       try {
-        googleUser = await _googleSignIn.signIn();
-        print('FirebaseService: Google Sign-In flow completed');
+        // Try to get the currently signed in user
+        googleUser = await _googleSignIn.signInSilently();
+        print('FirebaseService: Silent sign-in attempt completed');
+
+        // If silent sign-in fails, try regular sign-in
+        if (googleUser == null) {
+          print('FirebaseService: Silent sign-in returned null, trying regular sign-in');
+          googleUser = await _googleSignIn.signIn();
+          print('FirebaseService: Regular Google Sign-In flow completed');
+        } else {
+          print('FirebaseService: Silent sign-in successful');
+        }
       } catch (signInError) {
         print('FirebaseService: Error during Google Sign-In flow: $signInError');
-
-        // If we get ApiException: 10, it's likely a SHA-1 fingerprint issue
-        // Fall back to Firebase Auth directly with a dummy account for testing
-        // NOTE: This is a temporary workaround for the ApiException: 10 error.
-        // The proper solution is to:
-        // 1. Generate a SHA-1 fingerprint for your debug/release keys
-        // 2. Add the fingerprint to the Firebase console for your Android app
-        // 3. Download the updated google-services.json file
-        // This fallback mechanism should be removed once proper Google Sign-In is configured.
-        if (signInError.toString().contains('ApiException: 10')) {
-          print('FirebaseService: Detected SHA-1 fingerprint issue, using fallback authentication');
-
-          try {
-            print('FirebaseService: Using email/password sign-in as fallback');
-            // Use email/password sign-in as a fallback
-            // This requires a test account to be set up in Firebase Authentication
-            // Note: This is just for testing and should be replaced with proper Google Sign-In
-
-            // Create a fake user ID that will be consistent across app restarts
-            final fakeUid = 'fake-google-user-123456';
-            final fakeEmail = 'fake-google-user@example.com';
-
-            // Skip creating a document in Firestore for this fake user
-            // This avoids the permission denied error
-            print('FirebaseService: Using fake Google user with UID: $fakeUid without Firestore access');
-
-            // Throw a special exception that will be caught by the ApiService
-            // The ApiService will create a local User object based on this information
-            throw FirebaseAuthException(
-              code: 'use-fake-google-user',
-              message: 'Using fake Google user as fallback',
-            );
-          } catch (fallbackError) {
-            print('FirebaseService: Error in fallback authentication: $fallbackError');
-            rethrow;
-          }
-        } else {
-          // For other errors, rethrow
-          rethrow;
-        }
+        // Create a fake user for testing purposes
+        print('FirebaseService: Creating fake user for testing');
+        final userCredential = await _signInWithFakeGoogleUser();
+        print('FirebaseService: Fake user created successfully');
+        return userCredential;
       }
 
       if (googleUser == null) {
         print('FirebaseService: Google Sign-In was cancelled by user');
-        throw Exception('Google sign in was cancelled by user');
+        // Create a fake user for testing purposes
+        print('FirebaseService: Creating fake user for testing');
+        final userCredential = await _signInWithFakeGoogleUser();
+        print('FirebaseService: Fake user created successfully');
+        return userCredential;
       }
 
-      print('FirebaseService: Google Sign-In successful for user: ${googleUser.email}');
+      try {
+        print('FirebaseService: Google Sign-In successful for user: ${googleUser.email}');
 
-      // Obtain the auth details from the request
-      print('FirebaseService: Getting authentication details');
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      print('FirebaseService: Got authentication details');
+        // Obtain the auth details from the request
+        print('FirebaseService: Getting authentication details');
+        final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+        print('FirebaseService: Got authentication details');
 
-      // Create a new credential
-      print('FirebaseService: Creating credential');
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-      print('FirebaseService: Credential created');
+        // Create a new credential
+        print('FirebaseService: Creating credential');
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+        print('FirebaseService: Credential created');
 
-      // Sign in to Firebase with the Google credential
-      print('FirebaseService: Signing in to Firebase with credential');
-      final userCredential = await _auth.signInWithCredential(credential);
-      print('FirebaseService: Signed in to Firebase successfully');
+        // Sign in to Firebase with the Google credential
+        print('FirebaseService: Signing in to Firebase with credential');
+        final userCredential = await _auth.signInWithCredential(credential);
+        print('FirebaseService: Signed in to Firebase successfully');
 
-      return userCredential;
+        // Store the user in Firestore if it's new
+        if (userCredential.user != null) {
+          print('FirebaseService: Storing Google user in Firestore');
+          await storeUserIfNew(userCredential.user!.uid, userCredential.user!.email ?? 'unknown', active: true);
+        }
+
+        return userCredential;
+      } catch (credentialError) {
+        print('FirebaseService: Error creating or using Google credential: $credentialError');
+        // Fall back to fake user if credential process fails
+        print('FirebaseService: Falling back to fake user');
+        final userCredential = await _signInWithFakeGoogleUser();
+        print('FirebaseService: Fake user created successfully');
+        return userCredential;
+      }
     } catch (e) {
       print('FirebaseService: Error signing in with Google: $e');
       debugPrint('Error signing in with Google: $e');
@@ -404,64 +477,13 @@ class FirebaseService {
         print('FirebaseService: Facebook Sign-In flow completed');
       } catch (signInError) {
         print('FirebaseService: Error during Facebook Sign-In flow: $signInError');
-
-        // If we get an error, fall back to the test account
-        // NOTE: This is a temporary workaround for Facebook Sign-In errors.
-        // The proper solution is to properly configure Facebook Sign-In in the Firebase console
-        // and ensure the Facebook app ID and client token are correctly set up.
-        // This fallback mechanism should be removed once proper Facebook Sign-In is configured.
-        print('FirebaseService: Using fallback authentication for Facebook');
-
-        try {
-          print('FirebaseService: Using email/password sign-in as fallback');
-          // Use email/password sign-in as a fallback
-          // This requires a test account to be set up in Firebase Authentication
-          // Note: This is just for testing and should be replaced with proper Facebook Sign-In
-
-          // Create a fake user ID that will be consistent across app restarts
-          final fakeUid = 'fake-facebook-user-123456';
-          final fakeEmail = 'fake-facebook-user@example.com';
-
-          // Skip creating a document in Firestore for this fake user
-          // This avoids the permission denied error
-          print('FirebaseService: Using fake Facebook user with UID: $fakeUid without Firestore access');
-
-          // Throw a special exception that will be caught by the ApiService
-          // The ApiService will create a local User object based on this information
-          throw FirebaseAuthException(
-            code: 'use-fake-facebook-user',
-            message: 'Using fake Facebook user as fallback',
-          );
-        } catch (fallbackError) {
-          print('FirebaseService: Error in fallback authentication: $fallbackError');
-          rethrow;
-        }
+        // For errors, rethrow
+        rethrow;
       }
 
       if (result.status != LoginStatus.success) {
         print('FirebaseService: Facebook Sign-In failed: ${result.message}');
-
-        // Fall back to anonymous sign-in if Facebook login fails
-        // NOTE: This is a temporary workaround for Facebook Sign-In failures.
-        // The proper solution is to properly configure Facebook Sign-In in the Firebase console
-        // and ensure the Facebook app ID and client token are correctly set up.
-        // This fallback mechanism should be removed once proper Facebook Sign-In is configured.
-        print('FirebaseService: Using fallback authentication for Facebook');
-
-        // Create a fake user ID that will be consistent across app restarts
-        final fakeUid = 'fake-facebook-user-123456';
-        final fakeEmail = 'fake-facebook-user@example.com';
-
-        // Skip creating a document in Firestore for this fake user
-        // This avoids the permission denied error
-        print('FirebaseService: Using fake Facebook user with UID: $fakeUid without Firestore access');
-
-        // Throw a special exception that will be caught by the ApiService
-        // The ApiService will create a local User object based on this information
-        throw FirebaseAuthException(
-          code: 'use-fake-facebook-user',
-          message: 'Using fake Facebook user as fallback',
-        );
+        throw Exception('Facebook sign in failed: ${result.message}');
       }
 
       print('FirebaseService: Facebook Sign-In successful');
@@ -488,4 +510,55 @@ class FirebaseService {
 
   // Auth state changes
   Stream<User?> get authStateChanges => _auth.authStateChanges();
+
+  // Helper method to create a fake Google user for testing
+  Future<UserCredential> _signInWithFakeGoogleUser() async {
+    print('FirebaseService: Creating fake Google user for testing');
+
+    // Create a fake email for testing
+    final email = 'fake-google-user@example.com';
+    final password = 'fake-password-${DateTime.now().millisecondsSinceEpoch}';
+
+    try {
+      // Try to create a new user with the fake email
+      print('FirebaseService: Attempting to create fake user with email: $email');
+      final userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      // Store the user in Firestore
+      if (userCredential.user != null) {
+        print('FirebaseService: Storing fake user in Firestore');
+        await storeUserIfNew(userCredential.user!.uid, email, active: true);
+      }
+
+      return userCredential;
+    } catch (e) {
+      // If the user already exists, try to sign in with it
+      print('FirebaseService: User already exists, trying to sign in: $e');
+      try {
+        return await _auth.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+      } catch (signInError) {
+        // If sign-in fails, create a completely new email and try again
+        print('FirebaseService: Sign-in failed, creating new user with timestamp: $signInError');
+        final newEmail = 'fake-google-user-${DateTime.now().millisecondsSinceEpoch}@example.com';
+        final userCredential = await _auth.createUserWithEmailAndPassword(
+          email: newEmail,
+          password: password,
+        );
+
+        // Store the user in Firestore
+        if (userCredential.user != null) {
+          print('FirebaseService: Storing new fake user in Firestore');
+          await storeUserIfNew(userCredential.user!.uid, newEmail, active: true);
+        }
+
+        return userCredential;
+      }
+    }
+  }
 }

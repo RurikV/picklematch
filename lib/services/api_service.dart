@@ -137,30 +137,7 @@ class ApiService {
       );
     } catch (e) {
       print('ApiService: Google login error: $e');
-
-      // Check if this is our special exception for using a fake Google user
-      if (e.toString().contains('use-fake-google-user')) {
-        print('ApiService: Using fake Google user as fallback');
-
-        // Use the predefined fake user information
-        final fakeUid = 'fake-google-user-123456';
-        final fakeEmail = 'fake-google-user@example.com';
-
-        // Skip trying to get user data from Firestore
-        // This avoids the permission denied error
-        print('ApiService: Skipping Firestore access for fake Google user');
-
-        // Return basic fake user
-        print('ApiService: Returning basic fake user');
-        return app_models.User(
-          uid: fakeUid,
-          email: fakeEmail,
-          role: 'user',
-          isActive: true,
-        );
-      }
-
-      // For other errors, throw the original exception
+      // For errors, throw the original exception
       throw Exception('Google login error: $e');
     }
   }
@@ -211,30 +188,7 @@ class ApiService {
       );
     } catch (e) {
       print('ApiService: Facebook login error: $e');
-
-      // Check if this is our special exception for using a fake Facebook user
-      if (e.toString().contains('use-fake-facebook-user')) {
-        print('ApiService: Using fake Facebook user as fallback');
-
-        // Use the predefined fake user information
-        final fakeUid = 'fake-facebook-user-123456';
-        final fakeEmail = 'fake-facebook-user@example.com';
-
-        // Skip trying to get user data from Firestore
-        // This avoids the permission denied error
-        print('ApiService: Skipping Firestore access for fake Facebook user');
-
-        // Return basic fake user
-        print('ApiService: Returning basic fake user');
-        return app_models.User(
-          uid: fakeUid,
-          email: fakeEmail,
-          role: 'user',
-          isActive: true,
-        );
-      }
-
-      // For other errors, throw the original exception
+      // For errors, throw the original exception
       throw Exception('Facebook login error: $e');
     }
   }
@@ -289,16 +243,6 @@ class ApiService {
 
   Future<List<Game>> _fetchGames(String? date, String? locationId) async {
     try {
-      // Check if we're using a fake user
-      final currentUser = _firebaseService.auth.currentUser;
-      final isFakeUser = currentUser?.uid == 'fake-google-user-123456' || 
-                         currentUser?.uid == 'fake-facebook-user-123456';
-
-      if (isFakeUser) {
-        print('ApiService: Detected fake user, returning empty games list instead of accessing Firestore');
-        return [];
-      }
-
       List<Map<String, dynamic>> gamesData;
 
       if (date != null) {
@@ -430,16 +374,6 @@ class ApiService {
   Future<List<Location>> getLocations(String token) async {
     try {
       print('ApiService: getLocations called');
-
-      // Check if we're using a fake user
-      final currentUser = _firebaseService.auth.currentUser;
-      final isFakeUser = currentUser?.uid == 'fake-google-user-123456' || 
-                         currentUser?.uid == 'fake-facebook-user-123456';
-
-      if (isFakeUser) {
-        print('ApiService: Detected fake user, using default locations instead of Firestore');
-        return _getDefaultLocations();
-      }
 
       // Initialize default locations if needed
       print('ApiService: Initializing default locations');
