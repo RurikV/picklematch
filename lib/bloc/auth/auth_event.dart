@@ -43,3 +43,7 @@ class LoginRequested extends AuthEvent {
 }
 
 class VerifyEmailRequested extends AuthEvent {}
+
+class GoogleSignInRequested extends AuthEvent {}
+
+class FacebookSignInRequested extends AuthEvent {}

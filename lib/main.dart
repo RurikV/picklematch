@@ -92,17 +92,22 @@ class AppNavigator extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
+        print('AppNavigator: BlocBuilder received state: ${state.runtimeType}');
         if (state is AuthInitial || state is AuthLoading) {
+          print('AppNavigator: Showing loading screen for ${state.runtimeType}');
           return const Scaffold(
             body: Center(
               child: CircularProgressIndicator(),
             ),
           );
         } else if (state is AuthAuthenticated) {
+          print('AppNavigator: Navigating to HomeScreen for AuthAuthenticated state');
           return const HomeScreen();
         } else if (state is AuthVerificationNeeded) {
+          print('AppNavigator: Navigating to VerificationScreen for AuthVerificationNeeded state');
           return const VerificationScreen();
         } else {
+          print('AppNavigator: Navigating to LoginScreen for ${state.runtimeType} state');
           return const LoginScreen();
         }
       },

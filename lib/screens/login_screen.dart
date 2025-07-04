@@ -78,22 +78,32 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     return Scaffold(
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
+          print('LoginScreen: BlocListener received state: ${state.runtimeType}');
           if (state is AuthAuthenticated) {
+            print('LoginScreen: Received AuthAuthenticated state, navigating to HomeScreen');
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(builder: (_) => const HomeScreen()),
             );
+            print('LoginScreen: Navigation to HomeScreen completed');
           } else if (state is AuthVerificationNeeded || state is RegistrationSuccess) {
+            print('LoginScreen: Received ${state.runtimeType} state, navigating to VerificationScreen');
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(builder: (_) => const VerificationScreen()),
             );
           } else if (state is AuthFailure) {
+            print('LoginScreen: Received AuthFailure state: ${state.error}');
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(state.error)),
             );
           } else if (state is RegistrationFailure) {
+            print('LoginScreen: Received RegistrationFailure state: ${state.error}');
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(state.error)),
             );
+          } else if (state is AuthLoading) {
+            print('LoginScreen: Received AuthLoading state');
+          } else {
+            print('LoginScreen: Received unhandled state: ${state.runtimeType}');
           }
         },
         child: Container(
@@ -204,6 +214,62 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                   ? 'Don\'t have an account? Register'
                                   : 'Already have an account? Login',
                             ),
+                          ),
+                          const SizedBox(height: 24.0),
+                          const Divider(thickness: 1),
+                          const SizedBox(height: 16.0),
+                          const Text(
+                            'Or sign in with',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 16.0),
+                          BlocBuilder<AuthBloc, AuthState>(
+                            builder: (context, state) {
+                              return ElevatedButton.icon(
+                                onPressed: state is AuthLoading
+                                    ? null
+                                    : () {
+                                        context.read<AuthBloc>().add(GoogleSignInRequested());
+                                      },
+                                style: ElevatedButton.styleFrom(
+                                  minimumSize: const Size.fromHeight(50),
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: Colors.black,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8.0),
+                                    side: const BorderSide(color: Colors.grey),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.g_mobiledata, size: 24),
+                                label: const Text('Sign in with Google'),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 16.0),
+                          BlocBuilder<AuthBloc, AuthState>(
+                            builder: (context, state) {
+                              return ElevatedButton.icon(
+                                onPressed: state is AuthLoading
+                                    ? null
+                                    : () {
+                                        context.read<AuthBloc>().add(FacebookSignInRequested());
+                                      },
+                                style: ElevatedButton.styleFrom(
+                                  minimumSize: const Size.fromHeight(50),
+                                  backgroundColor: Colors.blue.shade900,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8.0),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.facebook, size: 24),
+                                label: const Text('Sign in with Facebook'),
+                              );
+                            },
                           ),
                         ],
                       ),
