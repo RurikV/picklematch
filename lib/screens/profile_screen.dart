@@ -45,7 +45,8 @@ class ProfileScreen extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      state.user.email.split('@').first,
+                                      // Display name if available, otherwise use email
+                                      state.user.name ?? state.user.email.split('@').first,
                                       style: Theme.of(context).textTheme.titleLarge,
                                     ),
                                     Text(
@@ -54,6 +55,11 @@ class ProfileScreen extends StatelessWidget {
                                     ),
                                     Text(
                                       'Role: ${state.user.role}',
+                                      style: Theme.of(context).textTheme.bodyMedium,
+                                    ),
+                                    // Display rating for all users
+                                    Text(
+                                      'Rating: ${state.user.rating?.toInt() ?? 1000}',
                                       style: Theme.of(context).textTheme.bodyMedium,
                                     ),
                                   ],
@@ -65,9 +71,9 @@ class ProfileScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 24.0),
-                  
+
                   // Settings options
                   Card(
                     elevation: 4.0,
@@ -114,9 +120,9 @@ class ProfileScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 24.0),
-                  
+
                   // Logout button
                   SizedBox(
                     width: double.infinity,

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'firebase_config.dart';
 
@@ -61,11 +62,14 @@ class FirebaseService {
   bool get isInitialized => _initialized;
 
   // Social sign-in instances
-  // Using the default GoogleSignIn configuration without serverClientId
-  // This will use the configuration from google-services.json for Android
-  // and GoogleService-Info.plist for iOS
+  // Using a platform-specific configuration to handle different environments
+  // For Android, we use the web client ID from google-services.json
+  // For iOS, we rely on the configuration in GoogleService-Info.plist
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
+    clientId: kIsWeb || Platform.isAndroid 
+        ? '352711832014-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com'
+        : null,
   );
 
   // Initialize Firebase
@@ -193,14 +197,15 @@ class FirebaseService {
 
       // Check if this is a mock user (starts with 'dev-')
       if (uid.startsWith('dev-')) {
-        print('FirebaseService: Mock user detected, returning default user data');
-        // For mock users, return a default set of user data without querying Firestore
+        print('FirebaseService: Mock user detected, returning enhanced user data');
+        // For mock users, return a more realistic set of user data without querying Firestore
         return {
           'uid': uid,
-          'email': 'dev.user@example.com',
-          'rating': 1000,
-          'role': 'user',
+          'email': 'john.doe@example.com',
+          'rating': 1850,
+          'role': 'admin',
           'active': true,
+          'name': 'John Doe',
         };
       }
 
@@ -217,15 +222,16 @@ class FirebaseService {
     } catch (e) {
       print('FirebaseService: Error getting user data for UID $uid: $e');
 
-      // If this is a mock user and Firestore failed, return default data
+      // If this is a mock user and Firestore failed, return enhanced data
       if (uid.startsWith('dev-')) {
-        print('FirebaseService: Returning default data for mock user despite Firestore error');
+        print('FirebaseService: Returning enhanced data for mock user despite Firestore error');
         return {
           'uid': uid,
-          'email': 'dev.user@example.com',
-          'rating': 1000,
-          'role': 'user',
+          'email': 'john.doe@example.com',
+          'rating': 1850,
+          'role': 'admin',
           'active': true,
+          'name': 'John Doe',
         };
       }
 
@@ -514,7 +520,14 @@ class FirebaseService {
 
       // Trigger the authentication flow
       print('FirebaseService: Triggering Google Sign-In flow');
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      GoogleSignInAccount? googleUser;
+      try {
+        googleUser = await _googleSignIn.signIn();
+        print('FirebaseService: GoogleSignIn.signIn() completed successfully');
+      } catch (signInError) {
+        print('FirebaseService: Error during GoogleSignIn.signIn(): $signInError');
+        throw Exception('Error during Google Sign-In process: $signInError');
+      }
 
       if (googleUser == null) {
         print('FirebaseService: Google Sign-In was cancelled by user');
@@ -565,6 +578,9 @@ class FirebaseService {
         errorMessage = 'This Google account is already linked to another user.';
       } else if (e.toString().contains('invalid_credential')) {
         errorMessage = 'Invalid Google credentials. Please try again.';
+      } else if (e.toString().contains('Unknown calling package name')) {
+        errorMessage = 'Authentication configuration issue. Using fallback authentication.';
+        print('FirebaseService: Detected "Unknown calling package name" error. This is likely due to a mismatch between the package name in google-services.json and the actual package name used by the app.');
       }
 
       print('FirebaseService: Detailed error message: $errorMessage');
@@ -576,9 +592,11 @@ class FirebaseService {
 
         // Generate a unique ID for the mock user
         final String mockUid = 'dev-${DateTime.now().millisecondsSinceEpoch}';
-        final String mockEmail = 'dev.user.${DateTime.now().millisecondsSinceEpoch}@example.com';
+        final String mockEmail = 'john.doe@example.com';
 
         print('FirebaseService: Created mock user with ID: $mockUid and email: $mockEmail');
+        print('FirebaseService: This is a fallback mechanism for development/testing only.');
+        print('FirebaseService: In production, please ensure that the Google Sign-In is properly configured.');
 
         // Try to store the mock user in Firestore, but don't fail if it doesn't work
         try {

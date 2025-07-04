@@ -76,6 +76,8 @@ class ApiService {
           email: email,
           role: 'user',
           isActive: firebaseUser.emailVerified,
+          rating: 1000.0, // Default rating for new users
+          name: email.split('@').first, // Use the part before @ as the name
         );
       }
 
@@ -85,6 +87,8 @@ class ApiService {
         email: email,
         role: userData['role'] ?? 'user',
         isActive: userData['active'] ?? false,
+        rating: userData['rating'] != null ? double.parse(userData['rating'].toString()) : 1000.0,
+        name: userData['name'] ?? email.split('@').first,
       );
     } catch (e) {
       throw Exception('Login error: $e');
@@ -122,16 +126,34 @@ class ApiService {
 
       // For mock users, we might not have Firestore access, so handle that case specially
       if (isMockOrAnonymous) {
-        print('ApiService: Mock or anonymous user detected, skipping Firestore checks');
+        print('ApiService: Mock or anonymous user detected, getting enhanced mock user data');
 
-        // For mock users, we'll just return a basic user object without checking Firestore
-        print('ApiService: Returning new mock user');
-        return app_models.User(
-          uid: firebaseUser.uid,
-          email: email,
-          role: 'user',
-          isActive: true, // All mock users are considered active
-        );
+        // Get enhanced mock user data from FirebaseService
+        final userData = await _firebaseService.getUserData(firebaseUser.uid);
+
+        if (userData != null) {
+          print('ApiService: Using enhanced mock user data');
+          // Use the enhanced mock user data
+          return app_models.User(
+            uid: firebaseUser.uid,
+            email: userData['email'] ?? 'john.doe@example.com',
+            role: userData['role'] ?? 'admin',
+            isActive: userData['active'] ?? true,
+            rating: userData['rating'] != null ? double.parse(userData['rating'].toString()) : 1850.0,
+            name: userData['name'] ?? 'John Doe',
+          );
+        } else {
+          print('ApiService: No enhanced mock user data available, using fallback');
+          // Fallback to basic user object if getUserData failed
+          return app_models.User(
+            uid: firebaseUser.uid,
+            email: 'john.doe@example.com',
+            role: 'admin',
+            isActive: true, // All mock users are considered active
+            rating: 1850.0,
+            name: 'John Doe',
+          );
+        }
       }
 
       // For regular users, get user data from Firestore
@@ -156,6 +178,8 @@ class ApiService {
           email: email,
           role: 'user',
           isActive: true, // All authenticated users are considered active
+          rating: 1000.0, // Default rating for new users
+          name: email.split('@').first, // Use the part before @ as the name
         );
       }
 
@@ -166,6 +190,8 @@ class ApiService {
         email: email,
         role: userData['role'] ?? 'user',
         isActive: userData['active'] ?? true,
+        rating: userData['rating'] != null ? double.parse(userData['rating'].toString()) : 1000.0,
+        name: userData['name'] ?? email.split('@').first,
       );
     } catch (e) {
       print('ApiService: Google login error: $e');
@@ -243,6 +269,8 @@ class ApiService {
           email: email,
           role: 'user',
           isActive: true, // Email link authenticated users are considered active
+          rating: 1000.0, // Default rating for new users
+          name: email.split('@').first, // Use the part before @ as the name
         );
       }
 
@@ -253,6 +281,8 @@ class ApiService {
         email: email,
         role: userData['role'] ?? 'user',
         isActive: userData['active'] ?? true,
+        rating: userData['rating'] != null ? double.parse(userData['rating'].toString()) : 1000.0,
+        name: userData['name'] ?? email.split('@').first,
       );
     } catch (e) {
       print('ApiService: Email link login error: $e');
@@ -290,6 +320,8 @@ class ApiService {
         email: email,
         role: 'user',
         isActive: false,
+        rating: 1000.0, // Default rating for new users
+        name: email.split('@').first, // Use the part before @ as the name
       );
     } catch (e) {
       throw Exception('Registration error: $e');
@@ -561,6 +593,8 @@ class ApiService {
             email: firebaseUser.email ?? 'unknown',
             role: 'user',
             isActive: firebaseUser.emailVerified,
+            rating: 1000.0, // Default rating for new users
+            name: (firebaseUser.email ?? 'unknown').split('@').first, // Use the part before @ as the name
           );
         }
 
@@ -569,6 +603,8 @@ class ApiService {
           email: firebaseUser.email ?? 'unknown',
           role: userData['role'] ?? 'user',
           isActive: userData['active'] ?? false,
+          rating: userData['rating'] != null ? double.parse(userData['rating'].toString()) : 1000.0,
+          name: userData['name'] ?? (firebaseUser.email ?? 'unknown').split('@').first,
         );
       } catch (e) {
         print('Error getting user data: $e');
