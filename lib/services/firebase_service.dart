@@ -250,13 +250,18 @@ class FirebaseService {
   }
 
   Future<List<Map<String, dynamic>>> getAllLocations() async {
+    print('FirebaseService: getAllLocations called');
     QuerySnapshot snapshot = await _firestore.collection('locations').get();
+    print('FirebaseService: Got ${snapshot.docs.length} location documents from Firestore');
 
-    return snapshot.docs.map((doc) {
+    final locations = snapshot.docs.map((doc) {
       Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
       data['id'] = doc.id;
       return data;
     }).toList();
+
+    print('FirebaseService: Returning ${locations.length} locations: ${locations.map((loc) => loc['name']).join(', ')}');
+    return locations;
   }
 
   Future<Map<String, dynamic>?> getLocationById(String locationId) async {
@@ -272,6 +277,7 @@ class FirebaseService {
   }
 
   Future<void> initializeDefaultLocations() async {
+    print('FirebaseService: initializeDefaultLocations called');
     List<String> defaultLocations = [
       "Tondiraba Indoor", 
       "Tondiraba Outdoor", 
@@ -279,15 +285,22 @@ class FirebaseService {
       "Golden Club", 
       "Pirita"
     ];
+    print('FirebaseService: Default locations: ${defaultLocations.join(', ')}');
 
+    print('FirebaseService: Getting existing locations');
     List<Map<String, dynamic>> existingLocations = await getAllLocations();
     Set<String> existingNames = existingLocations.map((loc) => loc['name'] as String).toSet();
+    print('FirebaseService: Existing location names: ${existingNames.join(', ')}');
 
+    int addedCount = 0;
     for (String name in defaultLocations) {
       if (!existingNames.contains(name)) {
+        print('FirebaseService: Adding new location: $name');
         await addLocation(name);
+        addedCount++;
       }
     }
+    print('FirebaseService: Added $addedCount new locations');
   }
 
   // Social sign-in methods

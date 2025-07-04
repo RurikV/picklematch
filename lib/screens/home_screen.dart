@@ -95,7 +95,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                   ),
-                
+
                 // Date picker
                 Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -104,39 +104,50 @@ class _HomeScreenState extends State<HomeScreen> {
                     onDateSelected: _onDateSelected,
                   ),
                 ),
-                
+
                 // Location selector
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: DropdownButtonFormField<String>(
-                    decoration: const InputDecoration(
-                      labelText: 'Location',
-                      border: OutlineInputBorder(),
-                    ),
-                    value: state.selectedLocationId,
-                    items: [
-                      const DropdownMenuItem<String>(
-                        value: null,
-                        child: Text('All Locations'),
-                      ),
-                      ...state.locations.map((location) {
-                        return DropdownMenuItem<String>(
-                          value: location.id,
-                          child: Text(location.name),
-                        );
-                      }),
-                    ],
-                    onChanged: (value) {
-                      if (value != null) {
-                        _onLocationSelected(value);
-                      } else {
-                        // Handle "All Locations" selection
-                        context.read<GameBloc>().add(const LoadGames());
-                      }
-                    },
+                  child: Builder(
+                    builder: (context) {
+                      print('HomeScreen: Building location dropdown with ${state.locations.length} locations');
+                      print('HomeScreen: Locations: ${state.locations.map((loc) => loc.name).join(', ')}');
+                      print('HomeScreen: Selected location ID: ${state.selectedLocationId}');
+
+                      return DropdownButtonFormField<String>(
+                        decoration: const InputDecoration(
+                          labelText: 'Location',
+                          border: OutlineInputBorder(),
+                        ),
+                        value: state.selectedLocationId,
+                        items: [
+                          const DropdownMenuItem<String>(
+                            value: null,
+                            child: Text('All Locations'),
+                          ),
+                          ...state.locations.map((location) {
+                            print('HomeScreen: Adding dropdown item for location: ${location.name} (${location.id})');
+                            return DropdownMenuItem<String>(
+                              value: location.id,
+                              child: Text(location.name),
+                            );
+                          }),
+                        ],
+                        onChanged: (value) {
+                          print('HomeScreen: Location dropdown value changed to: $value');
+                          if (value != null) {
+                            _onLocationSelected(value);
+                          } else {
+                            // Handle "All Locations" selection
+                            print('HomeScreen: "All Locations" selected, reloading games');
+                            context.read<GameBloc>().add(const LoadGames());
+                          }
+                        },
+                      );
+                    }
                   ),
                 ),
-                
+
                 // Game list
                 Expanded(
                   child: GameList(

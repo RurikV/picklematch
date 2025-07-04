@@ -72,18 +72,35 @@ class StorageService {
 
   // Save locations
   Future<void> saveLocations(List<Location> locations) async {
+    print('StorageService: saveLocations called with ${locations.length} locations');
+    print('StorageService: Locations to save: ${locations.map((loc) => loc.name).join(', ')}');
+
     final prefs = await SharedPreferences.getInstance();
     final locationsJson = locations.map((location) => location.toJson()).toList();
     await prefs.setString(_locationsKey, jsonEncode(locationsJson));
+
+    print('StorageService: Locations saved to SharedPreferences');
   }
 
   // Get locations
   Future<List<Location>> getLocations() async {
+    print('StorageService: getLocations called');
+
     final prefs = await SharedPreferences.getInstance();
     final locationsJson = prefs.getString(_locationsKey);
-    if (locationsJson == null) return [];
+
+    if (locationsJson == null) {
+      print('StorageService: No locations found in SharedPreferences');
+      return [];
+    }
+
     final List<dynamic> locationsData = jsonDecode(locationsJson);
-    return locationsData.map((locationData) => Location.fromJson(locationData)).toList();
+    final locations = locationsData.map((locationData) => Location.fromJson(locationData)).toList();
+
+    print('StorageService: Retrieved ${locations.length} locations from SharedPreferences');
+    print('StorageService: Retrieved locations: ${locations.map((loc) => loc.name).join(', ')}');
+
+    return locations;
   }
 
   // Save players
