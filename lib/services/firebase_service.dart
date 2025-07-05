@@ -215,13 +215,47 @@ class FirebaseService {
           }
         }
 
+        // Try to sign in with Google to check if the API is enabled
+        try {
+          print('FirebaseService: Testing Google Sign-In API availability...');
+          // We're not actually signing in, just checking if the API is available
+          await _googleSignIn.signInSilently();
+          print('FirebaseService: Google Sign-In API is available');
+        } catch (e) {
+          print('FirebaseService: WARNING - Google Sign-In API test failed: $e');
+
+          // Check for specific error codes
+          if (e.toString().contains('ApiException: 10')) {
+            print('FirebaseService: Detected ApiException with error code 10');
+            print('FirebaseService: This is likely due to a configuration issue with the Google Sign-In setup.');
+            print('FirebaseService: Please check the following:');
+            print('FirebaseService: 1. Make sure the SHA-1 fingerprint in Firebase console matches your development environment');
+            print('FirebaseService: 2. Make sure the Google Sign-In API is enabled in Google Cloud Console');
+            print('FirebaseService: 3. Make sure the package name in google-services.json matches your app\'s package name');
+            isConfigValid = false;
+          }
+        }
+
         print('FirebaseService: Configuration verification complete');
         if (isConfigValid) {
           print('FirebaseService: Google Sign-In configuration appears valid');
-          print('FirebaseService: If you still encounter error code 10, please follow the steps above to add your SHA-1 fingerprint to Firebase console');
+          print('FirebaseService: If you still encounter error code 10, please follow these additional steps:');
+          print('FirebaseService: 1. Go to Google Cloud Console (https://console.cloud.google.com)');
+          print('FirebaseService: 2. Select your Firebase project');
+          print('FirebaseService: 3. Go to "APIs & Services" > "Library"');
+          print('FirebaseService: 4. Search for "Google Sign-In API" and make sure it\'s enabled');
+          print('FirebaseService: 5. If not enabled, click on it and then click "Enable"');
+          print('FirebaseService: 6. Also check "Google Identity Services API" and make sure it\'s enabled');
         } else {
           print('FirebaseService: Google Sign-In configuration has issues that need to be fixed');
           print('FirebaseService: Please follow the steps in the HOW TO FIX ERROR CODE 10 section above');
+          print('FirebaseService: Additionally, check if the Google Sign-In API is enabled in Google Cloud Console:');
+          print('FirebaseService: 1. Go to Google Cloud Console (https://console.cloud.google.com)');
+          print('FirebaseService: 2. Select your Firebase project');
+          print('FirebaseService: 3. Go to "APIs & Services" > "Library"');
+          print('FirebaseService: 4. Search for "Google Sign-In API" and make sure it\'s enabled');
+          print('FirebaseService: 5. If not enabled, click on it and then click "Enable"');
+          print('FirebaseService: 6. Also check "Google Identity Services API" and make sure it\'s enabled');
         }
       } else {
         print('FirebaseService: Not running on Android, skipping SHA-1 verification');

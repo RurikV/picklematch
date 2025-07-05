@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/auth/auth_bloc.dart';
 import '../bloc/auth/auth_event.dart';
@@ -33,6 +35,13 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   // Show a detailed help dialog for SHA-1 fingerprint issues (error code 10)
   void _showSha1HelpDialog() {
     print('LoginScreen: Showing SHA-1 help dialog');
+
+    // Command to get SHA-1 fingerprint
+    const String keytoolCommand = 'keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android';
+
+    // Current SHA-1 fingerprint from google-services.json
+    const String currentSha1 = '601648ba29d0a97b2bdd4aabd35fb388ab553c2e';
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -42,7 +51,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
             children: const [
               Icon(Icons.error_outline, color: Colors.red),
               SizedBox(width: 8),
-              Text('Google Sign-In Error'),
+              Text('Google Sign-In Error (Code 10)'),
             ],
           ),
           content: SingleChildScrollView(
@@ -51,22 +60,57 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Text(
-                  'Your app is missing the required SHA-1 fingerprint in Firebase console.',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  'What is Error Code 10?',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Error code 10 means the app is missing the required SHA-1 fingerprint in Firebase console. '
+                  'This is a common issue during development and testing.',
                 ),
                 const SizedBox(height: 16),
-                const Text('Follow these steps to fix the issue:'),
+                const Text(
+                  'Follow these steps to fix the issue:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 8),
                 _buildStepItem(1, 'Run this command in your terminal:'),
                 Container(
                   padding: const EdgeInsets.all(8),
+                  margin: const EdgeInsets.only(bottom: 8),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade200,
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: const Text(
-                    'keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android',
-                    style: TextStyle(fontFamily: 'monospace', fontSize: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        keytoolCommand,
+                        style: TextStyle(fontFamily: 'monospace', fontSize: 12),
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            await Clipboard.setData(const ClipboardData(text: keytoolCommand));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Command copied to clipboard'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.copy, size: 16),
+                          label: const Text('Copy'),
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(0, 32),
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 _buildStepItem(2, 'Look for "SHA1:" in the output and copy the fingerprint'),
@@ -76,9 +120,77 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                 _buildStepItem(6, 'Replace the existing file in your project\'s android/app/ directory'),
                 _buildStepItem(7, 'Rebuild your app'),
                 const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 16),
                 const Text(
-                  'Note: This is a development configuration issue and not a problem with the app itself.',
+                  'Current Configuration',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'SHA-1 in google-services.json:',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        await Clipboard.setData(const ClipboardData(text: currentSha1));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('SHA-1 fingerprint copied to clipboard'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.copy, size: 16),
+                      label: const Text('Copy'),
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(0, 32),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  currentSha1,
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 12,
+                    color: Colors.blue.shade800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Make sure this matches the SHA-1 of your development environment.',
                   style: TextStyle(fontStyle: FontStyle.italic),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.amber.shade200),
+                  ),
+                  child: const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Note:',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        '• This is a development configuration issue, not an app problem\n'
+                        '• Each developer needs their own SHA-1 fingerprint added to Firebase\n'
+                        '• For release builds, you\'ll need to add the release certificate fingerprint',
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -88,7 +200,14 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: const Text('OK'),
+              child: const Text('Close'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _logDebugInfo();
+              },
+              child: const Text('Show Debug Info'),
             ),
           ],
         );
@@ -141,16 +260,47 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     print('- Screen size: ${mediaQuery.size.width}x${mediaQuery.size.height}');
     print('- Device pixel ratio: ${mediaQuery.devicePixelRatio}');
     print('- Text scale factor: ${mediaQuery.textScaleFactor}');
+    print('- Package name: app.vercel.picklematch.picklematch');
+
+    // Log build information
+    print('Build Information:');
+    print('- Flutter version: ${PlatformDispatcher.instance.views.first.platformDispatcher.semanticsEnabled ? "Semantics Enabled" : "Semantics Disabled"}');
+    print('- Is debug: ${!const bool.fromEnvironment("dart.vm.product")}');
+
+    // Log Firebase configuration
+    print('Firebase Configuration:');
+    print('- SHA-1 in google-services.json: 601648ba29d0a97b2bdd4aabd35fb388ab553c2e');
+    print('- To get your debug SHA-1, run:');
+    print('  keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android');
+
+    // Log Google Sign-In information
+    print('Google Sign-In Information:');
+    print('- Error code 10 means: The application is misconfigured');
+    print('- Common causes:');
+    print('  1. SHA-1 fingerprint missing in Firebase console');
+    print('  2. Package name mismatch between app and Firebase console');
+    print('  3. Google Sign-In API not enabled in Google Cloud Console');
+    print('- Verification steps:');
+    print('  1. Check that the SHA-1 fingerprint in Firebase console matches your development environment');
+    print('  2. Verify that the package name in google-services.json matches your app\'s package name');
+    print('  3. Make sure Google Sign-In API is enabled in Google Cloud Console');
 
     // Log auth state
     final authState = context.read<AuthBloc>().state;
     print('Auth State:');
     print('- Current state: ${authState.runtimeType}');
+    if (authState is AuthFailure) {
+      print('- Error message: ${authState.error}');
+      print('- Contains "ApiException: 10": ${authState.error.contains("ApiException: 10")}');
+      print('- Contains "code 10": ${authState.error.contains("code 10")}');
+      print('- Contains "SHA-1 fingerprint": ${authState.error.contains("SHA-1 fingerprint")}');
+    }
 
     // Log tab controller state
     print('Tab Controller:');
     print('- Current tab index: ${_tabController.index}');
     print('- Tab count: ${_tabController.length}');
+    print('- Current tab: ${_tabController.index == _googleTabIndex ? "Google Sign-In" : _tabController.index == _emailPasswordTabIndex ? "Email/Password" : "Email Link"}');
 
     // Log form state
     print('Form State:');
@@ -162,12 +312,17 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     // Show a snackbar to inform the user
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Debug information logged to console'),
-        duration: Duration(seconds: 2),
+        content: Text('Debug information logged to console. Check logs for detailed information.'),
+        duration: Duration(seconds: 3),
       ),
     );
 
     print('======== END DEBUG INFORMATION ========\n');
+
+    // Log a special message to help users find the debug information in the logs
+    print('\n[DEBUG_LOG] If you\'re looking for the debug information, search for "DEBUG INFORMATION" in the logs.');
+    print('[DEBUG_LOG] The most important information is in the "Google Sign-In Information" section.');
+    print('[DEBUG_LOG] Follow the steps in the SHA-1 help dialog to fix the issue.\n');
   }
 
   @override
@@ -589,18 +744,29 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                           ],
                         ),
 
-                        // Debug button
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: () {
-                              _logDebugInfo();
-                            },
-                            child: const Text(
-                              'Debug',
-                              style: TextStyle(fontSize: 12, color: Colors.grey),
+                        // Debug buttons
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton(
+                              onPressed: () {
+                                _showSha1HelpDialog();
+                              },
+                              child: const Text(
+                                'SHA-1 Help',
+                                style: TextStyle(fontSize: 12, color: Colors.blue),
+                              ),
                             ),
-                          ),
+                            TextButton(
+                              onPressed: () {
+                                _logDebugInfo();
+                              },
+                              child: const Text(
+                                'Debug',
+                                style: TextStyle(fontSize: 12, color: Colors.grey),
+                              ),
+                            ),
+                          ],
                         ),
 
                         const SizedBox(height: 24.0),
