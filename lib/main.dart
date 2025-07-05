@@ -21,18 +21,20 @@ void main() async {
   final apiService = ApiService();
   await apiService.initialize();
 
-  runApp(const MyApp());
+  runApp(MyApp(apiService: apiService));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final ApiService apiService;
+
+  const MyApp({super.key, required this.apiService});
 
   @override
   Widget build(BuildContext context) {
     return MultiRepositoryProvider(
       providers: [
         RepositoryProvider<ApiService>(
-          create: (context) => ApiService(),
+          create: (context) => apiService,
         ),
         RepositoryProvider<StorageService>(
           create: (context) => StorageService(),

@@ -30,6 +30,146 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   static const int _emailPasswordTabIndex = 1;
   static const int _emailLinkTabIndex = 2;
 
+  // Show a detailed help dialog for SHA-1 fingerprint issues (error code 10)
+  void _showSha1HelpDialog() {
+    print('LoginScreen: Showing SHA-1 help dialog');
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Row(
+            children: const [
+              Icon(Icons.error_outline, color: Colors.red),
+              SizedBox(width: 8),
+              Text('Google Sign-In Error'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Your app is missing the required SHA-1 fingerprint in Firebase console.',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                const Text('Follow these steps to fix the issue:'),
+                const SizedBox(height: 8),
+                _buildStepItem(1, 'Run this command in your terminal:'),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android',
+                    style: TextStyle(fontFamily: 'monospace', fontSize: 12),
+                  ),
+                ),
+                _buildStepItem(2, 'Look for "SHA1:" in the output and copy the fingerprint'),
+                _buildStepItem(3, 'Go to Firebase Console > Project Settings > Your Apps > Android App'),
+                _buildStepItem(4, 'Add the SHA-1 fingerprint you copied'),
+                _buildStepItem(5, 'Download the updated google-services.json file'),
+                _buildStepItem(6, 'Replace the existing file in your project\'s android/app/ directory'),
+                _buildStepItem(7, 'Rebuild your app'),
+                const SizedBox(height: 16),
+                const Text(
+                  'Note: This is a development configuration issue and not a problem with the app itself.',
+                  style: TextStyle(fontStyle: FontStyle.italic),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Helper method to build a step item in the help dialog
+  Widget _buildStepItem(int stepNumber, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: Colors.blue,
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                stepNumber.toString(),
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(text),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Debug method to log additional information about the device and app configuration
+  void _logDebugInfo() {
+    print('\n======== DEBUG INFORMATION ========');
+    print('LoginScreen: Debug button pressed');
+
+    // Log device information
+    print('Device Information:');
+    print('- Platform: ${Theme.of(context).platform}');
+
+    // Log app information
+    print('App Information:');
+    final MediaQueryData mediaQuery = MediaQuery.of(context);
+    print('- Screen size: ${mediaQuery.size.width}x${mediaQuery.size.height}');
+    print('- Device pixel ratio: ${mediaQuery.devicePixelRatio}');
+    print('- Text scale factor: ${mediaQuery.textScaleFactor}');
+
+    // Log auth state
+    final authState = context.read<AuthBloc>().state;
+    print('Auth State:');
+    print('- Current state: ${authState.runtimeType}');
+
+    // Log tab controller state
+    print('Tab Controller:');
+    print('- Current tab index: ${_tabController.index}');
+    print('- Tab count: ${_tabController.length}');
+
+    // Log form state
+    print('Form State:');
+    print('- Is login mode: $_isLogin');
+    print('- Email field (Email/Password tab): ${_emailController.text.isNotEmpty ? "Has text" : "Empty"}');
+    print('- Password field: ${_passwordController.text.isNotEmpty ? "Has text" : "Empty"}');
+    print('- Email field (Email Link tab): ${_emailLinkController.text.isNotEmpty ? "Has text" : "Empty"}');
+
+    // Show a snackbar to inform the user
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Debug information logged to console'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+
+    print('======== END DEBUG INFORMATION ========\n');
+  }
+
   @override
   void initState() {
     super.initState();
@@ -145,7 +285,11 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
               onPressed: state is AuthLoading
                   ? null
                   : () {
+                      print('LoginScreen: Google Sign-In button clicked');
+                      print('LoginScreen: Current tab index: ${_tabController.index}');
+                      print('LoginScreen: Current auth state: ${context.read<AuthBloc>().state.runtimeType}');
                       context.read<AuthBloc>().add(GoogleSignInRequested());
+                      print('LoginScreen: GoogleSignInRequested event dispatched to AuthBloc');
                     },
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size.fromHeight(50),
@@ -287,31 +431,104 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
           print('LoginScreen: BlocListener received state: ${state.runtimeType}');
+          print('LoginScreen: Current tab index: ${_tabController.index}');
+
           if (state is AuthAuthenticated) {
             print('LoginScreen: Received AuthAuthenticated state, navigating to HomeScreen');
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
-            );
-            print('LoginScreen: Navigation to HomeScreen completed');
+            print('LoginScreen: User details - Email: ${state.user.email}, UID: ${state.user.uid}, Active: ${state.user.isActive}, Role: ${state.user.role}');
+            print('LoginScreen: Token: ${state.token}');
+
+            try {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const HomeScreen()),
+              );
+              print('LoginScreen: Navigation to HomeScreen completed successfully');
+            } catch (e) {
+              print('LoginScreen: Error during navigation to HomeScreen: $e');
+            }
           } else if (state is AuthVerificationNeeded || state is RegistrationSuccess) {
             print('LoginScreen: Received ${state.runtimeType} state, navigating to VerificationScreen');
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const VerificationScreen()),
-            );
+
+            if (state is AuthVerificationNeeded) {
+              print('LoginScreen: User needs verification - Email: ${state.user.email}, UID: ${state.user.uid}');
+            } else if (state is RegistrationSuccess) {
+              print('LoginScreen: Registration successful - Email: ${state.user.email}, UID: ${state.user.uid}');
+            }
+
+            try {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const VerificationScreen()),
+              );
+              print('LoginScreen: Navigation to VerificationScreen completed successfully');
+            } catch (e) {
+              print('LoginScreen: Error during navigation to VerificationScreen: $e');
+            }
           } else if (state is AuthFailure) {
-            print('LoginScreen: Received AuthFailure state: ${state.error}');
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.error)),
-            );
+            print('LoginScreen: Received AuthFailure state');
+            print('LoginScreen: Error message: ${state.error}');
+            print('LoginScreen: Error type: ${state.error.contains('ApiException') ? 'ApiException' : 'Other'}');
+
+            // Special handling for error code 10
+            if (state.error.contains('ApiException: 10') || 
+                state.error.contains('code 10') || 
+                state.error.contains('SHA-1 fingerprint')) {
+              print('LoginScreen: Detected ApiException with error code 10 (Developer error)');
+
+              // Show a detailed help dialog for error code 10
+              _showSha1HelpDialog();
+
+              // Also show a snackbar with a brief message
+              try {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Google Sign-In configuration error. See dialog for instructions.'),
+                    duration: Duration(seconds: 5),
+                  ),
+                );
+                print('LoginScreen: Displayed error message in SnackBar and showing help dialog');
+              } catch (e) {
+                print('LoginScreen: Error displaying SnackBar: $e');
+              }
+            } else if (state.error.contains('Unknown calling package name')) {
+              print('LoginScreen: Detected "Unknown calling package name" error');
+
+              // Show a snackbar with the error message
+              try {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(state.error)),
+                );
+                print('LoginScreen: Displayed error message in SnackBar');
+              } catch (e) {
+                print('LoginScreen: Error displaying SnackBar: $e');
+              }
+            } else {
+              // For other errors, just show a snackbar
+              try {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(state.error)),
+                );
+                print('LoginScreen: Displayed error message in SnackBar');
+              } catch (e) {
+                print('LoginScreen: Error displaying SnackBar: $e');
+              }
+            }
           } else if (state is RegistrationFailure) {
             print('LoginScreen: Received RegistrationFailure state: ${state.error}');
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.error)),
-            );
+
+            try {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(state.error)),
+              );
+              print('LoginScreen: Displayed registration error message in SnackBar');
+            } catch (e) {
+              print('LoginScreen: Error displaying SnackBar: $e');
+            }
           } else if (state is AuthLoading) {
             print('LoginScreen: Received AuthLoading state');
+            print('LoginScreen: Showing loading indicator');
           } else {
             print('LoginScreen: Received unhandled state: ${state.runtimeType}');
+            print('LoginScreen: Full state details: $state');
           }
         },
         child: Container(
@@ -370,6 +587,20 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                             Tab(text: 'Email/Pwd'),
                             Tab(text: 'Email Link'),
                           ],
+                        ),
+
+                        // Debug button
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () {
+                              _logDebugInfo();
+                            },
+                            child: const Text(
+                              'Debug',
+                              style: TextStyle(fontSize: 12, color: Colors.grey),
+                            ),
+                          ),
                         ),
 
                         const SizedBox(height: 24.0),

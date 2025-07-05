@@ -191,22 +191,41 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
   Future<void> _onGoogleSignInRequested(GoogleSignInRequested event, Emitter<AuthState> emit) async {
     print('AuthBloc: Google Sign-In Requested');
+    print('AuthBloc: Current state: ${state.runtimeType}');
     emit(AuthLoading());
+    print('AuthBloc: Emitted AuthLoading state');
+
     try {
       print('AuthBloc: Calling API service to login with Google');
       final user = await _apiService.loginWithGoogle();
-      print('AuthBloc: Google Sign-In successful, user: ${user.email}, isActive: ${user.isActive}');
+      print('AuthBloc: Google Sign-In successful, user: ${user.email}, isActive: ${user.isActive}, role: ${user.role}');
+      print('AuthBloc: User details - UID: ${user.uid}, Name: ${user.name}, Rating: ${user.rating}');
 
       // In a real app, the token would come from the API
       final token = 'google-token-${DateTime.now().millisecondsSinceEpoch}';
+      print('AuthBloc: Generated token: $token');
 
       print('AuthBloc: Saving user and token to storage');
-      await _storageService.saveUser(user);
-      await _storageService.saveToken(token);
+      try {
+        await _storageService.saveUser(user);
+        print('AuthBloc: User saved to storage successfully');
+      } catch (storageError) {
+        print('AuthBloc: Error saving user to storage: $storageError');
+        // Continue even if storage fails
+      }
+
+      try {
+        await _storageService.saveToken(token);
+        print('AuthBloc: Token saved to storage successfully');
+      } catch (storageError) {
+        print('AuthBloc: Error saving token to storage: $storageError');
+        // Continue even if storage fails
+      }
 
       // Add a small delay to ensure the UI has time to update
       print('AuthBloc: Adding delay before emitting state');
       await Future.delayed(const Duration(milliseconds: 500));
+      print('AuthBloc: Delay completed');
 
       // Check if user is active
       if (user.isActive) {
@@ -221,10 +240,26 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
       // Force navigation based on user state
       print('AuthBloc: Forcing navigation based on user state');
-      // This is handled by the BlocListener in LoginScreen and the BlocBuilder in AppNavigator
+      print('AuthBloc: This is handled by the BlocListener in LoginScreen and the BlocBuilder in AppNavigator');
     } catch (e) {
       print('AuthBloc: Google Sign-In failed: $e');
-      emit(AuthFailure(error: e.toString()));
+      print('AuthBloc: Error type: ${e.runtimeType}');
+      print('AuthBloc: Full error details: ${e.toString()}');
+
+      // Extract error message for user display
+      String errorMessage = e.toString();
+      if (e.toString().contains('Exception: Google login error:')) {
+        // Extract the user-friendly message from the ApiService exception
+        final match = RegExp(r'Exception: Google login error: (.+)').firstMatch(e.toString());
+        if (match != null) {
+          errorMessage = match.group(1) ?? errorMessage;
+          print('AuthBloc: Extracted user-friendly error message: $errorMessage');
+        }
+      }
+
+      print('AuthBloc: Emitting AuthFailure state with error: $errorMessage');
+      emit(AuthFailure(error: errorMessage));
+      print('AuthBloc: AuthFailure state emitted');
     }
   }
 

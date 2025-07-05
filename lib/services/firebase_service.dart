@@ -63,14 +63,69 @@ class FirebaseService {
 
   // Social sign-in instances
   // Using a platform-specific configuration to handle different environments
-  // For Android, we use the web client ID from google-services.json
+  // For Android, we rely on the configuration in google-services.json
   // For iOS, we rely on the configuration in GoogleService-Info.plist
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
-    clientId: kIsWeb || Platform.isAndroid 
-        ? '352711832014-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com'
-        : null,
+    // Don't specify clientId for mobile platforms as it's configured in the respective platform files
+    // For web, a clientId would be needed, but this is a mobile app
   );
+
+  // Debug method to log GoogleSignIn configuration
+  void _logGoogleSignInConfig() {
+    print('\n======== GOOGLE SIGN-IN CONFIGURATION ========');
+    print('FirebaseService: GoogleSignIn Configuration:');
+    print('FirebaseService: Scopes: ${_googleSignIn.scopes}');
+    print('FirebaseService: SignInOption: ${_googleSignIn.signInOption}');
+
+    // Log platform information
+    if (kIsWeb) {
+      print('FirebaseService: Running on Web platform');
+    } else if (Platform.isAndroid) {
+      print('FirebaseService: Running on Android platform');
+      // Package name is not directly accessible from Platform class
+      print('FirebaseService: Android version: ${Platform.version}');
+      print('FirebaseService: Android locale: ${Platform.localeName}');
+
+      // Log the expected package name from google-services.json
+      print('FirebaseService: Expected package name: app.vercel.picklematch.picklematch');
+      print('FirebaseService: Verify this matches your app\'s actual package name in build.gradle');
+    } else if (Platform.isIOS) {
+      print('FirebaseService: Running on iOS platform');
+      print('FirebaseService: iOS locale: ${Platform.localeName}');
+    } else {
+      print('FirebaseService: Running on ${Platform.operatingSystem} platform');
+    }
+
+    // Log Firebase configuration
+    print('FirebaseService: Firebase Configuration:');
+    print('FirebaseService: Project ID: ${FirebaseConfig.projectId}');
+    print('FirebaseService: Auth Domain: ${FirebaseConfig.authDomain}');
+    print('FirebaseService: App ID: ${FirebaseConfig.appId}');
+
+    // Log SHA-1 certificate fingerprint information
+    print('FirebaseService: SHA-1 Certificate Fingerprint:');
+    print('FirebaseService: For error code 10, verify that the SHA-1 fingerprint in the Firebase console matches the one used to sign your app.');
+    print('FirebaseService: You can find your app\'s SHA-1 fingerprint using:');
+    print('FirebaseService: - For debug builds: keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android');
+    print('FirebaseService: - For release builds: keytool -list -v -keystore your-release-key.keystore -alias your-key-alias');
+    print('FirebaseService: Then add this fingerprint to the Firebase console under Project Settings > Your Apps > SHA certificate fingerprints.');
+
+    // Add more detailed instructions for fixing error code 10
+    print('FirebaseService: ');
+    print('FirebaseService: === HOW TO FIX ERROR CODE 10 ===');
+    print('FirebaseService: 1. Run this command in your terminal to get your debug SHA-1:');
+    print('FirebaseService:    keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android');
+    print('FirebaseService: 2. Look for "SHA1:" in the output and copy the fingerprint');
+    print('FirebaseService: 3. Go to Firebase Console > Project Settings > Your Apps > Android App');
+    print('FirebaseService: 4. Add the SHA-1 fingerprint you copied');
+    print('FirebaseService: 5. Download the updated google-services.json file');
+    print('FirebaseService: 6. Replace the existing file in your project\'s android/app/ directory');
+    print('FirebaseService: 7. Rebuild your app');
+    print('FirebaseService: ');
+
+    print('======== END GOOGLE SIGN-IN CONFIGURATION ========\n');
+  }
 
   // Initialize Firebase
   Future<void> initialize() async {
@@ -95,10 +150,88 @@ class FirebaseService {
 
       _initialized = true;
       debugPrint('Firebase initialized successfully');
+
+      // Log GoogleSignIn configuration for debugging
+      _logGoogleSignInConfig();
+
+      // Verify Google Sign-In configuration
+      await verifyGoogleSignInConfiguration();
     } catch (e) {
-      debugPrint('Error initializing Firebase: $e');
-      rethrow;
+      // Check if the error is because Firebase is already initialized
+      if (e.toString().contains('core/duplicate-app') && e.toString().contains('already exists')) {
+        debugPrint('Firebase app already exists, using existing instance');
+
+        // Get instances from existing Firebase app
+        _auth = FirebaseAuth.instance;
+        _firestore = FirebaseFirestore.instance;
+
+        _initialized = true;
+        debugPrint('Using existing Firebase instance');
+
+        // Log GoogleSignIn configuration for debugging
+        _logGoogleSignInConfig();
+
+        // No need to verify configuration as it's already initialized
+      } else {
+        // For other errors, log and rethrow
+        debugPrint('Error initializing Firebase: $e');
+        debugPrint('Error details: ${e.toString()}');
+        rethrow;
+      }
     }
+  }
+
+  // Verify Google Sign-In configuration
+  Future<bool> verifyGoogleSignInConfiguration() async {
+    print('FirebaseService: Verifying Google Sign-In configuration...');
+    bool isConfigValid = true;
+
+    try {
+      // Check if we're on Android (the platform where SHA-1 is required)
+      if (!kIsWeb && Platform.isAndroid) {
+        print('FirebaseService: Running on Android, checking configuration...');
+
+        // Check if the app ID is valid
+        if (FirebaseConfig.appId.isEmpty || FirebaseConfig.appId.contains('YOUR_APP_ID')) {
+          print('FirebaseService: WARNING - Invalid or missing Firebase App ID');
+          isConfigValid = false;
+        }
+
+        // Check if the API key is valid
+        if (FirebaseConfig.apiKey.isEmpty || FirebaseConfig.apiKey.contains('YOUR_API_KEY')) {
+          print('FirebaseService: WARNING - Invalid or missing Firebase API key');
+          isConfigValid = false;
+        }
+
+        // Try a simple Firebase operation to verify connectivity
+        try {
+          await _auth.fetchSignInMethodsForEmail('test@example.com');
+          print('FirebaseService: Firebase connectivity test successful');
+        } catch (e) {
+          print('FirebaseService: WARNING - Firebase connectivity test failed: $e');
+          if (e.toString().contains('INVALID_API_KEY')) {
+            print('FirebaseService: API key is invalid or restricted');
+            isConfigValid = false;
+          }
+        }
+
+        print('FirebaseService: Configuration verification complete');
+        if (isConfigValid) {
+          print('FirebaseService: Google Sign-In configuration appears valid');
+          print('FirebaseService: If you still encounter error code 10, please follow the steps above to add your SHA-1 fingerprint to Firebase console');
+        } else {
+          print('FirebaseService: Google Sign-In configuration has issues that need to be fixed');
+          print('FirebaseService: Please follow the steps in the HOW TO FIX ERROR CODE 10 section above');
+        }
+      } else {
+        print('FirebaseService: Not running on Android, skipping SHA-1 verification');
+      }
+    } catch (e) {
+      print('FirebaseService: Error during configuration verification: $e');
+      isConfigValid = false;
+    }
+
+    return isConfigValid;
   }
 
 
@@ -195,47 +328,59 @@ class FirebaseService {
         return null;
       }
 
-      // Check if this is a mock user (starts with 'dev-')
-      if (uid.startsWith('dev-')) {
-        print('FirebaseService: Mock user detected, returning enhanced user data');
-        // For mock users, return a more realistic set of user data without querying Firestore
+      // Query Firestore for user data
+      print('FirebaseService: Querying Firestore for user data');
+      try {
+        DocumentSnapshot snapshot = await _firestore.collection('users').doc(uid).get();
+        if (snapshot.exists) {
+          print('FirebaseService: User data found in Firestore');
+          return snapshot.data() as Map<String, dynamic>;
+        } else {
+          print('FirebaseService: No user document found in Firestore for UID: $uid');
+        }
+      } catch (firestoreError) {
+        print('FirebaseService: Error querying Firestore: $firestoreError');
+        print('FirebaseService: Continuing with basic user data');
+        // Continue with basic user data if Firestore query fails
+      }
+
+      // If we get here, either no user data was found in Firestore or there was an error
+      // Get the current Firebase user to extract basic information
+      final currentUser = _auth.currentUser;
+      if (currentUser != null && currentUser.uid == uid) {
+        print('FirebaseService: Creating basic user data from Firebase Auth');
+        // Create basic user data from Firebase Auth
         return {
           'uid': uid,
-          'email': 'john.doe@example.com',
-          'rating': 1850,
-          'role': 'admin',
+          'email': currentUser.email ?? 'unknown',
+          'rating': 1000,
+          'role': 'user',
           'active': true,
-          'name': 'John Doe',
+          'name': currentUser.displayName ?? (currentUser.email?.split('@').first ?? 'User'),
         };
       }
 
-      // For regular users, query Firestore
-      print('FirebaseService: Querying Firestore for user data');
-      DocumentSnapshot snapshot = await _firestore.collection('users').doc(uid).get();
-      if (snapshot.exists) {
-        print('FirebaseService: User data found in Firestore');
-        return snapshot.data() as Map<String, dynamic>;
-      }
-
-      print('FirebaseService: No user data found in Firestore');
+      print('FirebaseService: No user data found in Firestore or Firebase Auth');
       return null;
     } catch (e) {
       print('FirebaseService: Error getting user data for UID $uid: $e');
 
-      // If this is a mock user and Firestore failed, return enhanced data
-      if (uid.startsWith('dev-')) {
-        print('FirebaseService: Returning enhanced data for mock user despite Firestore error');
+      // Try to get basic data from Firebase Auth
+      final currentUser = _auth.currentUser;
+      if (currentUser != null && currentUser.uid == uid) {
+        print('FirebaseService: Creating basic user data from Firebase Auth after error');
+        // Create basic user data from Firebase Auth
         return {
           'uid': uid,
-          'email': 'john.doe@example.com',
-          'rating': 1850,
-          'role': 'admin',
+          'email': currentUser.email ?? 'unknown',
+          'rating': 1000,
+          'role': 'user',
           'active': true,
-          'name': 'John Doe',
+          'name': currentUser.displayName ?? (currentUser.email?.split('@').first ?? 'User'),
         };
       }
 
-      // Return null on error for regular users
+      // Return null if all else fails
       return null;
     }
   }
@@ -514,18 +659,75 @@ class FirebaseService {
   // Social sign-in methods
   Future<UserCredential> signInWithGoogle() async {
     print('FirebaseService: signInWithGoogle called');
-    try {
-      // First try the traditional Google Sign-In flow
-      print('FirebaseService: Trying traditional Google Sign-In flow');
 
+    // Log GoogleSignIn configuration
+    _logGoogleSignInConfig();
+
+    try {
       // Trigger the authentication flow
       print('FirebaseService: Triggering Google Sign-In flow');
       GoogleSignInAccount? googleUser;
       try {
+        print('FirebaseService: Calling _googleSignIn.signIn()');
         googleUser = await _googleSignIn.signIn();
         print('FirebaseService: GoogleSignIn.signIn() completed successfully');
       } catch (signInError) {
         print('FirebaseService: Error during GoogleSignIn.signIn(): $signInError');
+
+        // Extract more detailed error information if it's an ApiException
+        if (signInError.toString().contains('ApiException')) {
+          print('FirebaseService: Detected ApiException in error');
+
+          // Try to extract error code
+          final errorString = signInError.toString();
+          final codeMatch = RegExp(r'ApiException: (\d+)').firstMatch(errorString);
+          if (codeMatch != null) {
+            final errorCode = codeMatch.group(1);
+            print('FirebaseService: ApiException error code: $errorCode');
+
+            // Provide more information about specific error codes
+            switch (errorCode) {
+              case '10':
+                print('FirebaseService: Error code 10 - Developer error: The application is misconfigured.');
+                print('FirebaseService: This could be due to:');
+                print('FirebaseService: 1. Incorrect package name in google-services.json');
+                print('FirebaseService: 2. Missing SHA-1 certificate fingerprint in Firebase console');
+                print('FirebaseService: 3. Incorrect OAuth client ID');
+
+                // Print detailed instructions for fixing error code 10
+                print('FirebaseService: ');
+                print('FirebaseService: === HOW TO FIX ERROR CODE 10 ===');
+                print('FirebaseService: 1. Run this command in your terminal to get your debug SHA-1:');
+                print('FirebaseService:    keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android');
+                print('FirebaseService: 2. Look for "SHA1:" in the output and copy the fingerprint');
+                print('FirebaseService: 3. Go to Firebase Console > Project Settings > Your Apps > Android App');
+                print('FirebaseService: 4. Add the SHA-1 fingerprint you copied');
+                print('FirebaseService: 5. Download the updated google-services.json file');
+                print('FirebaseService: 6. Replace the existing file in your project\'s android/app/ directory');
+                print('FirebaseService: 7. Rebuild your app');
+                print('FirebaseService: ');
+                break;
+              case '12500':
+                print('FirebaseService: Error code 12500 - Play Services is out of date');
+                break;
+              case '8':
+                print('FirebaseService: Error code 8 - Internal error');
+                break;
+              case '5':
+                print('FirebaseService: Error code 5 - Invalid account');
+                break;
+              case '7':
+                print('FirebaseService: Error code 7 - Network error');
+                break;
+              case '4':
+                print('FirebaseService: Error code 4 - Sign in required');
+                break;
+              default:
+                print('FirebaseService: Unknown error code: $errorCode');
+            }
+          }
+        }
+
         throw Exception('Error during Google Sign-In process: $signInError');
       }
 
@@ -557,75 +759,148 @@ class FirebaseService {
       // Store the user in Firestore if it's new
       if (userCredential.user != null) {
         print('FirebaseService: Storing Google user in Firestore');
-        await storeUserIfNew(
-          userCredential.user!.uid, 
-          userCredential.user!.email ?? 'unknown', 
-          active: true
-        );
+        try {
+          // Get display name and photo URL from Google account
+          String? displayName = userCredential.user!.displayName;
+          String? photoURL = userCredential.user!.photoURL;
+          String email = userCredential.user!.email ?? 'unknown';
+
+          // Create a map with user data
+          Map<String, dynamic> userData = {
+            'uid': userCredential.user!.uid,
+            'email': email,
+            'rating': 1000,
+            'role': 'user',
+            'active': true,
+          };
+
+          // Add name if available
+          if (displayName != null && displayName.isNotEmpty) {
+            userData['name'] = displayName;
+          } else {
+            userData['name'] = email.split('@').first;
+          }
+
+          // Add photo URL if available
+          if (photoURL != null && photoURL.isNotEmpty) {
+            userData['photoURL'] = photoURL;
+          }
+
+          // Store user data in Firestore
+          DocumentReference userRef = _firestore.collection('users').doc(userCredential.user!.uid);
+          DocumentSnapshot snapshot = await userRef.get();
+
+          if (!snapshot.exists) {
+            // Create new user document
+            await userRef.set(userData);
+            print('FirebaseService: Created new user document in Firestore');
+          } else {
+            // Update existing user document with new data from Google
+            // but preserve existing data like rating
+            Map<String, dynamic> existingData = snapshot.data() as Map<String, dynamic>;
+
+            // Merge existing data with new data, prioritizing existing values for certain fields
+            userData['rating'] = existingData['rating'] ?? userData['rating'];
+            userData['role'] = existingData['role'] ?? userData['role'];
+
+            await userRef.update(userData);
+            print('FirebaseService: Updated existing user document in Firestore');
+          }
+
+          print('FirebaseService: Successfully stored user in Firestore');
+        } catch (firestoreError) {
+          print('FirebaseService: Error storing user in Firestore: $firestoreError');
+          print('FirebaseService: Continuing with authentication process');
+          // Continue even if Firestore storage fails
+        }
       }
 
       return userCredential;
     } catch (e) {
       print('FirebaseService: Error in Google Sign-In: $e');
+      print('FirebaseService: Error type: ${e.runtimeType}');
+      print('FirebaseService: Full error details: ${e.toString()}');
 
       // Provide more specific error messages based on the error type
       String errorMessage = 'Google sign-in failed';
+
+      // Check for network errors
       if (e.toString().contains('network_error')) {
         errorMessage = 'Network error during Google sign-in. Please check your internet connection.';
-      } else if (e.toString().contains('canceled')) {
+        print('FirebaseService: Detected network error');
+      } 
+      // Check for user cancellation
+      else if (e.toString().contains('canceled')) {
         errorMessage = 'Google sign-in was canceled by the user.';
-      } else if (e.toString().contains('credential_already_in_use')) {
+        print('FirebaseService: Detected user cancellation');
+      } 
+      // Check for credential already in use
+      else if (e.toString().contains('credential_already_in_use')) {
         errorMessage = 'This Google account is already linked to another user.';
-      } else if (e.toString().contains('invalid_credential')) {
+        print('FirebaseService: Detected credential already in use');
+      } 
+      // Check for invalid credentials
+      else if (e.toString().contains('invalid_credential')) {
         errorMessage = 'Invalid Google credentials. Please try again.';
-      } else if (e.toString().contains('Unknown calling package name')) {
-        errorMessage = 'Authentication configuration issue. Using fallback authentication.';
-        print('FirebaseService: Detected "Unknown calling package name" error. This is likely due to a mismatch between the package name in google-services.json and the actual package name used by the app.');
+        print('FirebaseService: Detected invalid credentials');
+      } 
+      // Check for package name mismatch
+      else if (e.toString().contains('Unknown calling package name')) {
+        errorMessage = 'Authentication configuration issue. Please try again or contact support.';
+        print('FirebaseService: Detected "Unknown calling package name" error.');
+        print('FirebaseService: This is likely due to a mismatch between the package name in google-services.json and the actual package name used by the app.');
+        print('FirebaseService: Check that the package name in your google-services.json matches your app\'s package name.');
+        print('FirebaseService: Also verify that the SHA-1 fingerprint is correctly added to the Firebase console.');
+      }
+      // Check for API exceptions not caught earlier
+      else if (e.toString().contains('ApiException')) {
+        print('FirebaseService: Detected ApiException in main catch block');
+
+        // Try to extract error code
+        final errorString = e.toString();
+        final codeMatch = RegExp(r'ApiException: (\d+)').firstMatch(errorString);
+        if (codeMatch != null) {
+          final errorCode = codeMatch.group(1);
+          print('FirebaseService: ApiException error code: $errorCode');
+
+          // Special handling for error code 10
+          if (errorCode == '10') {
+            print('FirebaseService: Error code 10 - Developer error: The application is misconfigured.');
+            print('FirebaseService: This could be due to:');
+            print('FirebaseService: 1. Incorrect package name in google-services.json');
+            print('FirebaseService: 2. Missing SHA-1 certificate fingerprint in Firebase console');
+            print('FirebaseService: 3. Incorrect OAuth client ID');
+
+            // Print detailed instructions for fixing error code 10
+            print('FirebaseService: ');
+            print('FirebaseService: === HOW TO FIX ERROR CODE 10 ===');
+            print('FirebaseService: 1. Run this command in your terminal to get your debug SHA-1:');
+            print('FirebaseService:    keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android');
+            print('FirebaseService: 2. Look for "SHA1:" in the output and copy the fingerprint');
+            print('FirebaseService: 3. Go to Firebase Console > Project Settings > Your Apps > Android App');
+            print('FirebaseService: 4. Add the SHA-1 fingerprint you copied');
+            print('FirebaseService: 5. Download the updated google-services.json file');
+            print('FirebaseService: 6. Replace the existing file in your project\'s android/app/ directory');
+            print('FirebaseService: 7. Rebuild your app');
+            print('FirebaseService: ');
+
+            errorMessage = 'Google Sign-In configuration error (code 10). Please add your SHA-1 fingerprint to Firebase console.';
+          } else {
+            errorMessage = 'Google Sign-In API error (code $errorCode). Please try again or contact support.';
+          }
+        } else {
+          print('FirebaseService: Could not extract error code from ApiException');
+          errorMessage = 'Google Sign-In API error. Please try again or contact support.';
+        }
+      }
+      // Check for Firebase auth errors
+      else if (e.toString().contains('FirebaseAuth')) {
+        print('FirebaseService: Detected FirebaseAuth error');
+        errorMessage = 'Firebase authentication error. Please try again or contact support.';
       }
 
       print('FirebaseService: Detailed error message: $errorMessage');
-
-      // If Google Sign-In fails, use a development mock user as fallback
-      // This is only for development/testing and doesn't rely on Firebase authentication
-      try {
-        print('FirebaseService: Using development mock user as fallback');
-
-        // Generate a unique ID for the mock user
-        final String mockUid = 'dev-${DateTime.now().millisecondsSinceEpoch}';
-        final String mockEmail = 'john.doe@example.com';
-
-        print('FirebaseService: Created mock user with ID: $mockUid and email: $mockEmail');
-        print('FirebaseService: This is a fallback mechanism for development/testing only.');
-        print('FirebaseService: In production, please ensure that the Google Sign-In is properly configured.');
-
-        // Try to store the mock user in Firestore, but don't fail if it doesn't work
-        try {
-          print('FirebaseService: Attempting to store mock user in Firestore');
-          await storeUserIfNew(
-            mockUid,
-            mockEmail,
-            active: true
-          );
-          print('FirebaseService: Successfully stored mock user in Firestore');
-        } catch (firestoreError) {
-          // If Firestore storage fails, just log the error and continue
-          // This allows the mock user to work even if Firestore is not accessible
-          print('FirebaseService: Failed to store mock user in Firestore: $firestoreError');
-          print('FirebaseService: Continuing with mock user without Firestore storage');
-        }
-
-        print('FirebaseService: Development fallback successful');
-
-        // Return a mock UserCredential
-        // We're not actually authenticating with Firebase, just creating a data structure
-        // that matches what the rest of the code expects
-        return MockUserCredential(mockUid, mockEmail);
-      } catch (fallbackError) {
-        print('FirebaseService: Error in fallback mechanism: $fallbackError');
-
-        // If all else fails, throw the original error with the detailed message
-        throw Exception('$errorMessage. Development fallback also failed: ${fallbackError.toString()}');
-      }
+      throw Exception(errorMessage);
     }
   }
 

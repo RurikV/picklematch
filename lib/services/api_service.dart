@@ -109,81 +109,54 @@ class ApiService {
         throw Exception('Failed to login with Google: No user returned');
       }
 
-      // Check if this is a mock or anonymous user (our fallback mechanism)
-      final bool isMockOrAnonymous = firebaseUser.isAnonymous || 
-                                     firebaseUser.uid.startsWith('dev-');
+      // Get the email from the user object
+      String email = firebaseUser.email ?? 'unknown';
+      print('ApiService: User email: $email');
 
-      // For mock or anonymous users (our fallback), we'll use the email from the user object
-      String email;
-      if (isMockOrAnonymous) {
-        // Use the email from the user object, which is already set for mock users
-        email = firebaseUser.email ?? 'dev.user.${DateTime.now().millisecondsSinceEpoch}@example.com';
-        print('ApiService: Using fallback authentication with email: $email');
-      } else {
-        email = firebaseUser.email ?? 'unknown';
-        print('ApiService: Google Sign-In successful for user: $email');
-      }
-
-      // For mock users, we might not have Firestore access, so handle that case specially
-      if (isMockOrAnonymous) {
-        print('ApiService: Mock or anonymous user detected, getting enhanced mock user data');
-
-        // Get enhanced mock user data from FirebaseService
-        final userData = await _firebaseService.getUserData(firebaseUser.uid);
-
-        if (userData != null) {
-          print('ApiService: Using enhanced mock user data');
-          // Use the enhanced mock user data
-          return app_models.User(
-            uid: firebaseUser.uid,
-            email: userData['email'] ?? 'john.doe@example.com',
-            role: userData['role'] ?? 'admin',
-            isActive: userData['active'] ?? true,
-            rating: userData['rating'] != null ? double.parse(userData['rating'].toString()) : 1850.0,
-            name: userData['name'] ?? 'John Doe',
-          );
-        } else {
-          print('ApiService: No enhanced mock user data available, using fallback');
-          // Fallback to basic user object if getUserData failed
-          return app_models.User(
-            uid: firebaseUser.uid,
-            email: 'john.doe@example.com',
-            role: 'admin',
-            isActive: true, // All mock users are considered active
-            rating: 1850.0,
-            name: 'John Doe',
-          );
-        }
-      }
-
-      // For regular users, get user data from Firestore
-      print('ApiService: Getting user data from Firestore for regular user');
+      // Get user data from Firestore
+      print('ApiService: Getting user data from Firestore');
       final userData = await _firebaseService.getUserData(firebaseUser.uid);
 
       if (userData == null) {
-        print('ApiService: No user data found, creating new user document');
-        // Create user document if it doesn't exist (social login users are active by default)
+        print('ApiService: No user data found in Firestore, this should not happen as we store user data during sign-in');
+        print('ApiService: Attempting to store user data again');
+
+        // Try to store user data again
         try {
           await _firebaseService.storeUserIfNew(firebaseUser.uid, email, active: true);
           print('ApiService: Successfully stored user in Firestore');
+
+          // Try to get user data again
+          final retryUserData = await _firebaseService.getUserData(firebaseUser.uid);
+
+          if (retryUserData != null) {
+            print('ApiService: Successfully retrieved user data after retry');
+            return app_models.User(
+              uid: firebaseUser.uid,
+              email: email,
+              role: retryUserData['role'] ?? 'user',
+              isActive: retryUserData['active'] ?? true,
+              rating: retryUserData['rating'] != null ? double.parse(retryUserData['rating'].toString()) : 1000.0,
+              name: retryUserData['name'] ?? email.split('@').first,
+            );
+          }
         } catch (firestoreError) {
           print('ApiService: Failed to store user in Firestore: $firestoreError');
-          print('ApiService: Continuing without Firestore storage');
         }
 
-        print('ApiService: Returning new user');
-        // Return basic user
+        // If we still don't have user data, create a basic user object
+        print('ApiService: Creating basic user object from Firebase Auth data');
         return app_models.User(
           uid: firebaseUser.uid,
           email: email,
           role: 'user',
-          isActive: true, // All authenticated users are considered active
-          rating: 1000.0, // Default rating for new users
-          name: email.split('@').first, // Use the part before @ as the name
+          isActive: true,
+          rating: 1000.0,
+          name: firebaseUser.displayName ?? email.split('@').first,
         );
       }
 
-      print('ApiService: Returning existing user');
+      print('ApiService: Returning user with data from Firestore');
       // Return user from Firestore data
       return app_models.User(
         uid: firebaseUser.uid,
@@ -195,23 +168,52 @@ class ApiService {
       );
     } catch (e) {
       print('ApiService: Google login error: $e');
+      print('ApiService: Error type: ${e.runtimeType}');
+      print('ApiService: Full error details: ${e.toString()}');
 
       // Extract the most user-friendly error message
       String errorMessage = 'Google login failed';
 
+      // Check for specific error types and provide more detailed messages
       if (e.toString().contains('Network error')) {
         errorMessage = 'Network error during sign-in. Please check your internet connection.';
+        print('ApiService: Detected network error');
       } else if (e.toString().contains('canceled by the user')) {
         errorMessage = 'Sign-in was canceled. Please try again.';
+        print('ApiService: Detected user cancellation');
       } else if (e.toString().contains('already linked')) {
         errorMessage = 'This account is already linked to another user.';
+        print('ApiService: Detected account already linked');
       } else if (e.toString().contains('Invalid')) {
         errorMessage = 'Invalid credentials. Please try again.';
-      } else if (e.toString().contains('Development fallback')) {
-        // This is our mock user fallback, but it failed
-        errorMessage = 'Development fallback failed. Please check Firestore permissions.';
-        print('ApiService: Development fallback failed: $e');
+        print('ApiService: Detected invalid credentials');
+      } else if (e.toString().contains('ApiException: 10')) {
+        errorMessage = 'Developer error: The application is misconfigured. Please contact support.';
+        print('ApiService: Detected ApiException with error code 10');
+        print('ApiService: This is likely due to a configuration issue with the Google Sign-In setup.');
+        print('ApiService: Check the package name in google-services.json and SHA-1 fingerprint in Firebase console.');
+      } else if (e.toString().contains('ApiException')) {
+        // Try to extract error code for other API exceptions
+        final errorString = e.toString();
+        final codeMatch = RegExp(r'ApiException: (\d+)').firstMatch(errorString);
+        if (codeMatch != null) {
+          final errorCode = codeMatch.group(1);
+          print('ApiService: Detected ApiException with error code: $errorCode');
+          errorMessage = 'Google Sign-In API error (code $errorCode). Please try again or contact support.';
+        } else {
+          print('ApiService: Detected ApiException but could not extract error code');
+          errorMessage = 'Google Sign-In API error. Please try again or contact support.';
+        }
+      } else if (e.toString().contains('Unknown calling package name')) {
+        errorMessage = 'Authentication configuration issue. Please contact support.';
+        print('ApiService: Detected "Unknown calling package name" error');
+        print('ApiService: This is likely due to a mismatch between the package name in google-services.json and the actual package name used by the app.');
+      } else if (e.toString().contains('FirebaseAuth')) {
+        errorMessage = 'Firebase authentication error. Please try again or contact support.';
+        print('ApiService: Detected FirebaseAuth error');
       }
+
+      print('ApiService: User-friendly error message: $errorMessage');
 
       // For other errors, throw a user-friendly exception
       throw Exception('Google login error: $errorMessage');
