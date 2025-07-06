@@ -74,8 +74,22 @@ class _GameListState extends State<GameList> {
       return player.getDisplayName();
     }
 
-    // Fallback to email-based name if player not found in repository
-    return playerId.split('@').first;
+    // Enhanced fallback logic to ensure names are always displayed
+    // Check if playerId looks like an email (contains @)
+    if (playerId.contains('@')) {
+      // Extract name from email
+      return playerId.split('@').first;
+    }
+
+    // If playerId doesn't look like an email, it might be a UID
+    // Try to find a more user-friendly display
+    // For UIDs, we'll show a shortened version with "User" prefix
+    if (playerId.length > 10) {
+      return 'User ${playerId.substring(0, 8)}';
+    }
+
+    // Last resort: return the playerId as-is but with "User" prefix
+    return 'User $playerId';
   }
 
   String _getTeamNames(Team team) {
