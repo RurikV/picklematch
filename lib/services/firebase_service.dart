@@ -127,6 +127,22 @@ class FirebaseService {
     print('======== END GOOGLE SIGN-IN CONFIGURATION ========\n');
   }
 
+  // Helper method to detect if we're running in a test environment
+  bool _isTestEnvironment() {
+    // Check if we're running in a test environment
+    // In Flutter tests, we can detect this by checking the stack trace
+    // or by looking for test-specific patterns
+    try {
+      final stackTrace = StackTrace.current.toString();
+      return stackTrace.contains('flutter_test') || 
+             stackTrace.contains('test_') ||
+             stackTrace.contains('package:test') ||
+             const bool.fromEnvironment('flutter.test', defaultValue: false);
+    } catch (e) {
+      return false;
+    }
+  }
+
   // Initialize Firebase
   Future<void> initialize() async {
     if (_initialized) return;
@@ -173,9 +189,11 @@ class FirebaseService {
 
         // No need to verify configuration as it's already initialized
       } else {
-        // For other errors, log and rethrow
-        debugPrint('Error initializing Firebase: $e');
-        debugPrint('Error details: ${e.toString()}');
+        // For other errors, log and rethrow (but suppress logging in test environment)
+        if (!_isTestEnvironment()) {
+          debugPrint('Error initializing Firebase: $e');
+          debugPrint('Error details: ${e.toString()}');
+        }
         rethrow;
       }
     }
@@ -470,43 +488,62 @@ class FirebaseService {
 
   // Game methods
   Future<String> addGame(String dateStr, String timeStr, String locationId) async {
-    DocumentReference docRef = await _firestore.collection('games').add({
-      'date': dateStr,
-      'time': timeStr,
-      'location_id': locationId,
-      'team1': {'player1': null, 'player2': null},
-      'team2': {'player1': null, 'player2': null},
-      'team1_score1': 0,
-      'team1_score2': 0,
-      'team2_score1': 0,
-      'team2_score2': 0,
-    });
+    try {
+      // Check if user is authenticated
+      if (_auth.currentUser == null) {
+        print('FirebaseService: No authenticated user for addGame');
+        throw Exception('User not authenticated. Please log in to create games.');
+      }
 
-    return docRef.id;
+      print('FirebaseService: Adding game for date: $dateStr, time: $timeStr, location: $locationId');
+      DocumentReference docRef = await _firestore.collection('games').add({
+        'date': dateStr,
+        'time': timeStr,
+        'location_id': locationId,
+        'team1': {'player1': null, 'player2': null},
+        'team2': {'player1': null, 'player2': null},
+        'team1_score1': 0,
+        'team1_score2': 0,
+        'team2_score1': 0,
+        'team2_score2': 0,
+      });
+
+      print('FirebaseService: Successfully created game with ID: ${docRef.id}');
+      return docRef.id;
+    } catch (e) {
+      print('FirebaseService: Error adding game: $e');
+      throw Exception('Failed to create game: $e');
+    }
   }
 
   Future<List<Map<String, dynamic>>> getGamesForDate(String dateStr) async {
     try {
       // Check if user is authenticated
       if (_auth.currentUser == null) {
-        print('FirebaseService: No authenticated user, returning empty games list');
-        return [];
+        print('FirebaseService: No authenticated user for getGamesForDate($dateStr)');
+        throw Exception('User not authenticated. Please log in to view games.');
       }
 
+      print('FirebaseService: Querying games for date: $dateStr');
       QuerySnapshot snapshot = await _firestore.collection('games')
           .where('date', isEqualTo: dateStr)
           .orderBy('time')
           .get();
 
-      return snapshot.docs.map((doc) {
+      print('FirebaseService: Found ${snapshot.docs.length} games for date $dateStr');
+
+      final games = snapshot.docs.map((doc) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
         data['id'] = doc.id;
+        print('FirebaseService: Game ${doc.id} - Date: ${data['date']}, Time: ${data['time']}');
         return data;
       }).toList();
+
+      return games;
     } catch (e) {
       print('FirebaseService: Error getting games for date $dateStr: $e');
-      // Return empty list on error
-      return [];
+      // Re-throw the error instead of silently returning empty list
+      throw Exception('Failed to load games for date $dateStr: $e');
     }
   }
 
@@ -556,23 +593,28 @@ class FirebaseService {
     try {
       // Check if user is authenticated
       if (_auth.currentUser == null) {
-        print('FirebaseService: No authenticated user, returning empty game dates');
-        return {};
+        print('FirebaseService: No authenticated user for getAllGameDates()');
+        throw Exception('User not authenticated. Please log in to view game dates.');
       }
 
+      print('FirebaseService: Querying all game dates');
       QuerySnapshot snapshot = await _firestore.collection('games').get();
       Set<String> dates = {};
 
+      print('FirebaseService: Found ${snapshot.docs.length} total games');
       for (var doc in snapshot.docs) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-        dates.add(data['date'] as String);
+        String gameDate = data['date'] as String;
+        dates.add(gameDate);
+        print('FirebaseService: Game ${doc.id} has date: $gameDate');
       }
 
+      print('FirebaseService: Unique game dates: ${dates.toList()}');
       return dates;
     } catch (e) {
       print('FirebaseService: Error getting all game dates: $e');
-      // Return empty set on error
-      return {};
+      // Re-throw the error instead of silently returning empty set
+      throw Exception('Failed to load game dates: $e');
     }
   }
 

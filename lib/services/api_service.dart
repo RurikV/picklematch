@@ -343,51 +343,58 @@ class ApiService {
   }
 
   Future<List<Game>> _fetchGames(String? date, String? locationId) async {
-    try {
-      List<Map<String, dynamic>> gamesData;
+    print('ApiService: _fetchGames called with date: $date, locationId: $locationId');
 
-      if (date != null) {
-        gamesData = await _firebaseService.getGamesForDate(date);
-      } else {
-        // If no date is provided, get all games
-        // This is a simplification - in a real app, you might want to limit this
-        final allDates = await _firebaseService.getAllGameDates();
-        gamesData = [];
+    List<Map<String, dynamic>> gamesData;
 
-        for (final dateStr in allDates) {
-          final dateGames = await _firebaseService.getGamesForDate(dateStr);
-          gamesData.addAll(dateGames);
-        }
+    if (date != null) {
+      print('ApiService: Fetching games for specific date: $date');
+      gamesData = await _firebaseService.getGamesForDate(date);
+    } else {
+      print('ApiService: Fetching all games (no date specified)');
+      // If no date is provided, get all games
+      // This is a simplification - in a real app, you might want to limit this
+      final allDates = await _firebaseService.getAllGameDates();
+      gamesData = [];
+
+      for (final dateStr in allDates) {
+        final dateGames = await _firebaseService.getGamesForDate(dateStr);
+        gamesData.addAll(dateGames);
       }
-
-      // Filter by location if provided
-      if (locationId != null) {
-        gamesData = gamesData.where((game) => game['location_id'] == locationId).toList();
-      }
-
-      // Convert to Game objects
-      return gamesData.map((data) {
-        // Convert Firestore data format to our Game model format
-        final gameData = {
-          'id': data['id'],
-          'time': data['time'],
-          'location_id': data['location_id'],
-          'team1': data['team1'],
-          'team2': data['team2'],
-          'team1_score1': data['team1_score1'],
-          'team1_score2': data['team1_score2'],
-          'team2_score1': data['team2_score1'],
-          'team2_score2': data['team2_score2'],
-          'date': data['date'],
-        };
-
-        return Game.fromJson(gameData);
-      }).toList();
-    } catch (e) {
-      print('ApiService: Error in _fetchGames: $e');
-      print('ApiService: Returning empty games list');
-      return [];
     }
+
+    print('ApiService: Retrieved ${gamesData.length} games from Firebase');
+
+    // Filter by location if provided
+    if (locationId != null) {
+      print('ApiService: Filtering games by location: $locationId');
+      final originalCount = gamesData.length;
+      gamesData = gamesData.where((game) => game['location_id'] == locationId).toList();
+      print('ApiService: After location filter: ${gamesData.length} games (was $originalCount)');
+    }
+
+    // Convert to Game objects
+    print('ApiService: Converting ${gamesData.length} games to Game objects');
+    final games = gamesData.map((data) {
+      // Convert Firestore data format to our Game model format
+      final gameData = {
+        'id': data['id'],
+        'time': data['time'],
+        'location_id': data['location_id'],
+        'team1': data['team1'],
+        'team2': data['team2'],
+        'team1_score1': data['team1_score1'],
+        'team1_score2': data['team1_score2'],
+        'team2_score1': data['team2_score1'],
+        'team2_score2': data['team2_score2'],
+        'date': data['date'],
+      };
+
+      return Game.fromJson(gameData);
+    }).toList();
+
+    print('ApiService: Successfully converted to ${games.length} Game objects');
+    return games;
   }
 
   Future<Game> createGame(String token, Game game) async {

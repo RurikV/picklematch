@@ -25,7 +25,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   }
 
   Future<void> _onLoadGames(LoadGames event, Emitter<GameState> emit) async {
-    print('GameBloc: _onLoadGames called');
+    print('GameBloc: _onLoadGames called with date: ${event.date}, locationId: ${event.locationId}');
     emit(GameLoading());
     try {
       _token = await _storageService.getToken();
@@ -245,23 +245,32 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   }
 
   Future<void> _onSetSelectedDate(SetSelectedDate event, Emitter<GameState> emit) async {
+    print('GameBloc: _onSetSelectedDate called with date: ${event.date}');
     final currentState = state;
     if (currentState is GamesLoaded) {
+      print('GameBloc: Current state is GamesLoaded, saving date and reloading games');
       // Save selected date
       await _storageService.saveSelectedDate(event.date);
+
+      final formattedDate = '${event.date.year}-${event.date.month.toString().padLeft(2, '0')}-${event.date.day.toString().padLeft(2, '0')}';
+      print('GameBloc: Triggering LoadGames with date: $formattedDate, locationId: ${currentState.selectedLocationId}');
 
       // Reload games with new date
       add(LoadGames(
-        date: '${event.date.year}-${event.date.month.toString().padLeft(2, '0')}-${event.date.day.toString().padLeft(2, '0')}',
+        date: formattedDate,
         locationId: currentState.selectedLocationId,
       ));
     } else {
+      print('GameBloc: Current state is ${currentState.runtimeType}, saving date and loading games');
       // Save selected date
       await _storageService.saveSelectedDate(event.date);
 
+      final formattedDate = '${event.date.year}-${event.date.month.toString().padLeft(2, '0')}-${event.date.day.toString().padLeft(2, '0')}';
+      print('GameBloc: Triggering LoadGames with date: $formattedDate');
+
       // Load games with new date
       add(LoadGames(
-        date: '${event.date.year}-${event.date.month.toString().padLeft(2, '0')}-${event.date.day.toString().padLeft(2, '0')}',
+        date: formattedDate,
       ));
     }
   }

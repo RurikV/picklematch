@@ -38,6 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onDateSelected(DateTime date) {
+    print('HomeScreen: Date selected: $date');
     context.read<GameBloc>().add(SetSelectedDate(date: date));
   }
 

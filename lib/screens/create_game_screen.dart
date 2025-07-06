@@ -16,11 +16,11 @@ class CreateGameScreen extends StatefulWidget {
 
 class _CreateGameScreenState extends State<CreateGameScreen> {
   final _formKey = GlobalKey<FormState>();
-  
+
   DateTime _selectedDate = DateTime.now();
   TimeOfDay _selectedTime = TimeOfDay.now();
   String? _selectedLocationId;
-  
+
   List<Location> _locations = [];
   bool _isLoading = false;
   String? _errorMessage;
@@ -40,6 +40,9 @@ class _CreateGameScreenState extends State<CreateGameScreen> {
           _selectedLocationId = _locations.first.id;
         }
       });
+    } else {
+      // If GameBloc is not in GamesLoaded state, trigger LoadGames to get locations
+      context.read<GameBloc>().add(const LoadGames());
     }
   }
 
@@ -110,14 +113,30 @@ class _CreateGameScreenState extends State<CreateGameScreen> {
       body: BlocListener<GameBloc, GameState>(
         listener: (context, state) {
           if (state is GameCreated) {
+            setState(() {
+              _isLoading = false;
+            });
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Game created successfully')),
             );
-            Navigator.of(context).pop();
+            // Reset the form after successful creation
+            setState(() {
+              _selectedDate = DateTime.now();
+              _selectedTime = TimeOfDay.now();
+              _errorMessage = null;
+            });
           } else if (state is GameError) {
             setState(() {
               _isLoading = false;
               _errorMessage = state.error;
+            });
+          } else if (state is GamesLoaded) {
+            // Update locations when GameBloc loads them
+            setState(() {
+              _locations = state.locations;
+              if (_locations.isNotEmpty && _selectedLocationId == null) {
+                _selectedLocationId = _locations.first.id;
+              }
             });
           }
         },
@@ -142,9 +161,9 @@ class _CreateGameScreenState extends State<CreateGameScreen> {
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 16.0),
-                
+
                 // Time picker
                 InkWell(
                   onTap: () => _selectTime(context),
@@ -159,9 +178,9 @@ class _CreateGameScreenState extends State<CreateGameScreen> {
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 16.0),
-                
+
                 // Location dropdown
                 DropdownButtonFormField<String>(
                   decoration: const InputDecoration(
@@ -181,7 +200,7 @@ class _CreateGameScreenState extends State<CreateGameScreen> {
                     });
                   },
                 ),
-                
+
                 if (_errorMessage != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 8.0),
@@ -190,9 +209,9 @@ class _CreateGameScreenState extends State<CreateGameScreen> {
                       style: const TextStyle(color: Colors.red),
                     ),
                   ),
-                
+
                 const Spacer(),
-                
+
                 // Create button
                 SizedBox(
                   width: double.infinity,
