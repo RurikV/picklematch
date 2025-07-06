@@ -22,12 +22,12 @@ class _GameDetailScreenState extends State<GameDetailScreen> with SingleTickerPr
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
-  
+
   final TextEditingController _team1Score1Controller = TextEditingController();
   final TextEditingController _team1Score2Controller = TextEditingController();
   final TextEditingController _team2Score1Controller = TextEditingController();
   final TextEditingController _team2Score2Controller = TextEditingController();
-  
+
   late Game _game;
   Location? _location;
 
@@ -35,26 +35,26 @@ class _GameDetailScreenState extends State<GameDetailScreen> with SingleTickerPr
   void initState() {
     super.initState();
     _game = widget.game;
-    
+
     // Initialize score controllers
     _team1Score1Controller.text = _game.team1Score1?.toString() ?? '';
     _team1Score2Controller.text = _game.team1Score2?.toString() ?? '';
     _team2Score1Controller.text = _game.team2Score1?.toString() ?? '';
     _team2Score2Controller.text = _game.team2Score2?.toString() ?? '';
-    
+
     // Set up animations
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
     );
-    
+
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _animationController,
         curve: Curves.easeIn,
       ),
     );
-    
+
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0.0, 0.5),
       end: Offset.zero,
@@ -64,9 +64,9 @@ class _GameDetailScreenState extends State<GameDetailScreen> with SingleTickerPr
         curve: Curves.easeOut,
       ),
     );
-    
+
     _animationController.forward();
-    
+
     // Find location
     final gameState = context.read<GameBloc>().state;
     if (gameState is GamesLoaded) {
@@ -126,9 +126,9 @@ class _GameDetailScreenState extends State<GameDetailScreen> with SingleTickerPr
           ),
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop();
+              Navigator.of(context).pop(); // Close dialog
               context.read<GameBloc>().add(DeleteGame(gameId: _game.id));
-              Navigator.of(context).pop(); // Return to home screen
+              // Navigation will happen when GameDeleted state is received
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
@@ -139,7 +139,7 @@ class _GameDetailScreenState extends State<GameDetailScreen> with SingleTickerPr
 
   String _getPlayerName(String? playerId) {
     if (playerId == null) return 'Empty';
-    
+
     // In a real app, you would look up the player name from a player repository
     return playerId.split('@').first;
   }
@@ -247,9 +247,9 @@ class _GameDetailScreenState extends State<GameDetailScreen> with SingleTickerPr
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 24.0),
-                  
+
                   // Teams and scores
                   Card(
                     elevation: 4.0,
@@ -266,7 +266,7 @@ class _GameDetailScreenState extends State<GameDetailScreen> with SingleTickerPr
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                           const SizedBox(height: 16.0),
-                          
+
                           // Team 1
                           Row(
                             children: [
@@ -293,9 +293,9 @@ class _GameDetailScreenState extends State<GameDetailScreen> with SingleTickerPr
                                 ),
                             ],
                           ),
-                          
+
                           const Divider(height: 32.0),
-                          
+
                           // Team 2
                           Row(
                             children: [
@@ -326,9 +326,9 @@ class _GameDetailScreenState extends State<GameDetailScreen> with SingleTickerPr
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 24.0),
-                  
+
                   // Scores
                   Card(
                     elevation: 4.0,
@@ -345,7 +345,7 @@ class _GameDetailScreenState extends State<GameDetailScreen> with SingleTickerPr
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                           const SizedBox(height: 16.0),
-                          
+
                           Row(
                             children: [
                               Expanded(
@@ -398,9 +398,9 @@ class _GameDetailScreenState extends State<GameDetailScreen> with SingleTickerPr
                                   ],
                                 ),
                               ),
-                              
+
                               const SizedBox(width: 16.0),
-                              
+
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -453,9 +453,9 @@ class _GameDetailScreenState extends State<GameDetailScreen> with SingleTickerPr
                               ),
                             ],
                           ),
-                          
+
                           const SizedBox(height: 16.0),
-                          
+
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
