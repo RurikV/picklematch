@@ -46,6 +46,12 @@ class _HomeScreenState extends State<HomeScreen> {
     context.read<GameBloc>().add(SetSelectedLocation(locationId: locationId));
   }
 
+  void _onLocationCleared() {
+    print('HomeScreen: Clearing location filter');
+    // Clear the selected location by setting it to null
+    context.read<GameBloc>().add(const SetSelectedLocation(locationId: null));
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -132,8 +138,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               _onLocationSelected(value);
                             } else {
                               // Handle "All Locations" selection
-                              print('HomeScreen: "All Locations" selected, reloading games');
-                              context.read<GameBloc>().add(const LoadGames());
+                              print('HomeScreen: "All Locations" selected, clearing location filter');
+                              _onLocationCleared();
                             }
                           },
                         );

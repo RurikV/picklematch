@@ -75,7 +75,7 @@ class SetSelectedDate extends GameEvent {
 }
 
 class SetSelectedLocation extends GameEvent {
-  final String locationId;
+  final String? locationId;
 
   const SetSelectedLocation({required this.locationId});
 

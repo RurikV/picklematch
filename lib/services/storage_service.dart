@@ -142,9 +142,13 @@ class StorageService {
   }
 
   // Save selected location ID
-  Future<void> saveSelectedLocationId(String locationId) async {
+  Future<void> saveSelectedLocationId(String? locationId) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_selectedLocationIdKey, locationId);
+    if (locationId != null) {
+      await prefs.setString(_selectedLocationIdKey, locationId);
+    } else {
+      await prefs.remove(_selectedLocationIdKey);
+    }
   }
 
   // Get selected location ID
