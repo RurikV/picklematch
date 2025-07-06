@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/game.dart';
 import '../models/location.dart';
+import '../models/player.dart';
+import '../services/api_service.dart';
+import '../services/storage_service.dart';
 
-class GameList extends StatelessWidget {
+class GameList extends StatefulWidget {
   final List<Game> games;
   final List<Location> locations;
   final Function(Game) onGameTap;
@@ -14,17 +17,70 @@ class GameList extends StatelessWidget {
     required this.onGameTap,
   });
 
+  @override
+  _GameListState createState() => _GameListState();
+}
+
+class _GameListState extends State<GameList> {
+  Map<String, Player> _players = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlayers();
+  }
+
+  Future<void> _loadPlayers() async {
+    try {
+      final storageService = StorageService();
+      final apiService = ApiService();
+
+      // Try to get players from cache first
+      _players = await storageService.getPlayers();
+
+      // If cache is empty or we want fresh data, fetch from API
+      if (_players.isEmpty) {
+        final token = await storageService.getToken();
+        if (token != null) {
+          _players = await apiService.getPlayers(token);
+          await storageService.savePlayers(_players);
+        }
+      }
+
+      // Update UI if mounted
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      print('Error loading players: $e');
+      // Continue with empty players map - fallback to email-based names
+    }
+  }
+
   String _getLocationName(String locationId) {
-    final location = locations.firstWhere(
+    final location = widget.locations.firstWhere(
       (loc) => loc.id == locationId,
       orElse: () => Location(id: 'unknown', name: 'Unknown Location'),
     );
     return location.name;
   }
 
+  String _getPlayerName(String? playerId) {
+    if (playerId == null) return 'Empty';
+
+    // Look up the player name from the player repository
+    final player = _players[playerId];
+    if (player != null) {
+      return player.getDisplayName();
+    }
+
+    // Fallback to email-based name if player not found in repository
+    return playerId.split('@').first;
+  }
+
   String _getTeamNames(Team team) {
-    final player1 = team.player1 != null ? team.player1!.split('@').first : 'Empty';
-    final player2 = team.player2 != null ? team.player2!.split('@').first : 'Empty';
+    final player1 = _getPlayerName(team.player1);
+    final player2 = _getPlayerName(team.player2);
     return '$player1 / $player2';
   }
 
@@ -33,13 +89,13 @@ class GameList extends StatelessWidget {
         game.team2Score1 == null || game.team2Score2 == null) {
       return 'No scores';
     }
-    
+
     return '${game.team1Score1}-${game.team2Score1}, ${game.team1Score2}-${game.team2Score2}';
   }
 
   @override
   Widget build(BuildContext context) {
-    if (games.isEmpty) {
+    if (widget.games.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -63,10 +119,10 @@ class GameList extends StatelessWidget {
     }
 
     return ListView.builder(
-      itemCount: games.length,
+      itemCount: widget.games.length,
       itemBuilder: (context, index) {
-        final game = games[index];
-        
+        final game = widget.games[index];
+
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
           child: Card(
@@ -75,7 +131,7 @@ class GameList extends StatelessWidget {
               borderRadius: BorderRadius.circular(12.0),
             ),
             child: InkWell(
-              onTap: () => onGameTap(game),
+              onTap: () => widget.onGameTap(game),
               borderRadius: BorderRadius.circular(12.0),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -103,9 +159,9 @@ class GameList extends StatelessWidget {
                         ),
                       ],
                     ),
-                    
+
                     const SizedBox(height: 12.0),
-                    
+
                     // Teams and scores
                     Row(
                       children: [
@@ -130,7 +186,7 @@ class GameList extends StatelessWidget {
                             ],
                           ),
                         ),
-                        
+
                         // VS
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
@@ -146,7 +202,7 @@ class GameList extends StatelessWidget {
                             ),
                           ),
                         ),
-                        
+
                         // Team 2
                         Expanded(
                           child: Column(
@@ -171,7 +227,7 @@ class GameList extends StatelessWidget {
                         ),
                       ],
                     ),
-                    
+
                     // Scores if available
                     if (game.team1Score1 != null)
                       Padding(
@@ -188,7 +244,7 @@ class GameList extends StatelessWidget {
                           ],
                         ),
                       ),
-                    
+
                     // Available slots indicator
                     if (!game.team1.isFull || !game.team2.isFull)
                       Padding(

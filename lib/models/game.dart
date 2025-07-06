@@ -74,9 +74,8 @@ class Game {
     }
 
     final locationId = json['location_id'];
-    if (locationId == null) {
-      throw Exception('Game location_id cannot be null');
-    }
+    // Provide default value for missing location_id to prevent unnecessary exceptions
+    final safeLocationId = locationId ?? 'unknown-location';
 
     final dateStr = json['date'];
     if (dateStr == null) {
@@ -97,7 +96,7 @@ class Game {
     return Game(
       id: id as String,
       time: time as String,
-      locationId: locationId as String,
+      locationId: safeLocationId as String,
       team1: Team.fromJson(team1Data as Map<String, dynamic>),
       team2: Team.fromJson(team2Data as Map<String, dynamic>),
       team1Score1: json['team1_score1'] as int?,

@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../services/api_service.dart';
 import '../../services/storage_service.dart';
+import '../../utils/validation_rules.dart';
 import 'game_event.dart';
 import 'game_state.dart';
 
@@ -166,6 +167,32 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         _token = await _storageService.getToken();
         if (_token == null) {
           emit(const GameError(error: 'Authentication token not found'));
+          return;
+        }
+
+        // Get current user for validation
+        final currentUser = await _storageService.getUser();
+        if (currentUser == null) {
+          emit(const GameError(error: 'User information not found'));
+          return;
+        }
+
+        // Find the game to validate
+        final game = currentState.games.firstWhere(
+          (g) => g.id == event.gameId,
+          orElse: () => throw Exception('Game not found'),
+        );
+
+        // Validate if player can join the game
+        final validationError = ValidationRules.validatePlayerJoinGame(
+          game, 
+          currentUser.uid, 
+          event.team
+        );
+
+        if (validationError != null) {
+          emit(GameError(error: validationError));
+          emit(currentState); // Restore previous state
           return;
         }
 
