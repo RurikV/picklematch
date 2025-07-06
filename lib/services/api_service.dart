@@ -478,6 +478,21 @@ class ApiService {
     }
   }
 
+  Future<Game> removePlayerFromGame(String token, String gameId, String team, String playerPosition) async {
+    try {
+      // Remove player from Firestore
+      await _firebaseService.removePlayerFromGame(gameId, team, playerPosition);
+
+      // Get the updated game
+      final games = await getGames(token, date: null);
+      final updatedGame = games.firstWhere((g) => g.id == gameId);
+
+      return updatedGame;
+    } catch (e) {
+      throw Exception('Error removing player from game: $e');
+    }
+  }
+
   // Location methods
   Future<List<Location>> getLocations(String token) async {
     try {

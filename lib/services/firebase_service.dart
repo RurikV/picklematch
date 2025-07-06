@@ -585,6 +585,23 @@ class FirebaseService {
     });
   }
 
+  Future<void> removePlayerFromGame(String gameId, String team, String playerPosition) async {
+    try {
+      print('FirebaseService: Removing $playerPosition from $team in game $gameId');
+
+      // Update the specific player field to null
+      await _firestore.collection('games').doc(gameId).update({
+        '$team.$playerPosition': null,
+        '$team.${playerPosition}_email': null,
+      });
+
+      print('FirebaseService: Successfully removed player from game');
+    } catch (e) {
+      print('FirebaseService: Error removing player from game: $e');
+      throw Exception('Failed to remove player from game: $e');
+    }
+  }
+
   Future<void> deleteGame(String gameId) async {
     await _firestore.collection('games').doc(gameId).delete();
   }

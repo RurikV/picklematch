@@ -21,6 +21,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     on<JoinGame>(_onJoinGame);
     on<CreateGame>(_onCreateGame);
     on<DeleteGame>(_onDeleteGame);
+    on<RemovePlayerFromGame>(_onRemovePlayerFromGame);
     on<SetSelectedDate>(_onSetSelectedDate);
     on<SetSelectedLocation>(_onSetSelectedLocation);
   }
@@ -266,6 +267,55 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         emit(currentState.copyWith(games: updatedGames));
       } catch (e) {
         emit(GameError(error: 'Failed to delete game: $e'));
+        emit(currentState); // Restore previous state
+      }
+    }
+  }
+
+  Future<void> _onRemovePlayerFromGame(RemovePlayerFromGame event, Emitter<GameState> emit) async {
+    final currentState = state;
+    if (currentState is GamesLoaded) {
+      emit(GameLoading());
+      try {
+        _token = await _storageService.getToken();
+        if (_token == null) {
+          emit(const GameError(error: 'Authentication token not found'));
+          return;
+        }
+
+        // Get current user for validation
+        final currentUser = await _storageService.getUser();
+        if (currentUser == null) {
+          emit(const GameError(error: 'User information not found'));
+          return;
+        }
+
+        // Validate if user is admin
+        if (currentUser.role != 'admin') {
+          emit(const GameError(error: 'Only administrators can remove players from games'));
+          emit(currentState); // Restore previous state
+          return;
+        }
+
+        final updatedGame = await _apiService.removePlayerFromGame(
+          _token!, 
+          event.gameId, 
+          event.team, 
+          event.playerPosition
+        );
+
+        // Update the game in the list
+        final updatedGames = currentState.games.map((game) {
+          return game.id == updatedGame.id ? updatedGame : game;
+        }).toList();
+
+        // Update cache
+        await _storageService.saveGames(updatedGames);
+
+        emit(PlayerRemovedFromGame(game: updatedGame));
+        emit(currentState.copyWith(games: updatedGames));
+      } catch (e) {
+        emit(GameError(error: 'Failed to remove player from game: $e'));
         emit(currentState); // Restore previous state
       }
     }

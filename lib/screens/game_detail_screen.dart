@@ -184,6 +184,58 @@ class _GameDetailScreenState extends State<GameDetailScreen> with SingleTickerPr
     return playerId.split('@').first;
   }
 
+  void _removePlayer(String team, String playerPosition) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove Player'),
+        content: const Text('Are you sure you want to remove this player from the game?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Close dialog
+              context.read<GameBloc>().add(RemovePlayerFromGame(
+                gameId: _game.id,
+                team: team,
+                playerPosition: playerPosition,
+              ));
+            },
+            child: const Text('Remove', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlayerRow(String label, String? playerId, String team, String playerPosition) {
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        final isAdmin = state is AuthAuthenticated && state.user.role == 'admin';
+        final playerName = _getPlayerName(playerId);
+
+        return Row(
+          children: [
+            Expanded(
+              child: Text('$label: $playerName'),
+            ),
+            if (isAdmin && playerId != null)
+              IconButton(
+                icon: const Icon(Icons.close, size: 16.0, color: Colors.red),
+                onPressed: () => _removePlayer(team, playerPosition),
+                tooltip: 'Remove Player',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -216,6 +268,13 @@ class _GameDetailScreenState extends State<GameDetailScreen> with SingleTickerPr
           } else if (state is GameJoined) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Joined game successfully')),
+            );
+            setState(() {
+              _game = state.game;
+            });
+          } else if (state is PlayerRemovedFromGame) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Player removed successfully')),
             );
             setState(() {
               _game = state.game;
@@ -321,8 +380,8 @@ class _GameDetailScreenState extends State<GameDetailScreen> with SingleTickerPr
                                       ),
                                     ),
                                     const SizedBox(height: 8.0),
-                                    Text('Player 1: ${_getPlayerName(_game.team1.player1)}'),
-                                    Text('Player 2: ${_getPlayerName(_game.team1.player2)}'),
+                                    _buildPlayerRow('Player 1', _game.team1.player1, 'team1', 'player1'),
+                                    _buildPlayerRow('Player 2', _game.team1.player2, 'team1', 'player2'),
                                   ],
                                 ),
                               ),
@@ -350,8 +409,8 @@ class _GameDetailScreenState extends State<GameDetailScreen> with SingleTickerPr
                                       ),
                                     ),
                                     const SizedBox(height: 8.0),
-                                    Text('Player 1: ${_getPlayerName(_game.team2.player1)}'),
-                                    Text('Player 2: ${_getPlayerName(_game.team2.player2)}'),
+                                    _buildPlayerRow('Player 1', _game.team2.player1, 'team2', 'player1'),
+                                    _buildPlayerRow('Player 2', _game.team2.player2, 'team2', 'player2'),
                                   ],
                                 ),
                               ),

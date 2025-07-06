@@ -82,3 +82,18 @@ class SetSelectedLocation extends GameEvent {
   @override
   List<Object?> get props => [locationId];
 }
+
+class RemovePlayerFromGame extends GameEvent {
+  final String gameId;
+  final String team; // 'team1' or 'team2'
+  final String playerPosition; // 'player1' or 'player2'
+
+  const RemovePlayerFromGame({
+    required this.gameId,
+    required this.team,
+    required this.playerPosition,
+  });
+
+  @override
+  List<Object?> get props => [gameId, team, playerPosition];
+}

@@ -88,3 +88,12 @@ class GameDeleted extends GameState {
   @override
   List<Object?> get props => [gameId];
 }
+
+class PlayerRemovedFromGame extends GameState {
+  final Game game;
+
+  const PlayerRemovedFromGame({required this.game});
+
+  @override
+  List<Object?> get props => [game];
+}
