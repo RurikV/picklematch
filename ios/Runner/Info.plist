@@ -45,5 +45,7 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>This app uses the local network to connect to the Flutter debugging service during development.</string>
 </dict>
 </plist>
