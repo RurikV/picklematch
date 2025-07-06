@@ -564,6 +564,7 @@ class ApiService {
           email: userData['email'],
           rating: userData['rating'] != null ? double.parse(userData['rating'].toString()) : null,
           active: userData['active'] ?? false,
+          name: userData['name'],
         );
       });
 
