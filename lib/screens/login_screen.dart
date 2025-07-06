@@ -773,7 +773,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
 
                         // Tab Bar View
                         SizedBox(
-                          height: 300, // Fixed height for the tab content
+                          height: 400, // Increased height for the tab content to prevent overflow
                           child: TabBarView(
                             controller: _tabController,
                             children: [

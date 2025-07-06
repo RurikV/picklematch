@@ -21,6 +21,14 @@ void main() {
   setUp(() {
     mockApiService = MockApiService();
     mockStorageService = MockStorageService();
+
+    // Stub the storage service methods that might be called
+    when(mockStorageService.getSelectedDate()).thenAnswer((_) async => null);
+    when(mockStorageService.getSelectedLocationId()).thenAnswer((_) async => null);
+    when(mockStorageService.getGames()).thenAnswer((_) async => []);
+    when(mockStorageService.getLocations()).thenAnswer((_) async => []);
+    when(mockStorageService.getToken()).thenAnswer((_) async => null);
+
     gameBloc = GameBloc(
       apiService: mockApiService,
       storageService: mockStorageService,
@@ -142,6 +150,7 @@ void main() {
       build: () {
         when(mockStorageService.getToken()).thenAnswer((_) async => testToken);
         when(mockApiService.getGames(testToken)).thenThrow(Exception('Failed to load games'));
+        when(mockApiService.getGames(testToken, date: formattedDate, locationId: testLocationId)).thenThrow(Exception('Failed to load games'));
         when(mockStorageService.getGames()).thenAnswer((_) async => testGames);
         when(mockStorageService.getLocations()).thenAnswer((_) async => testLocations);
         when(mockStorageService.getSelectedDate()).thenAnswer((_) async => testDate);
@@ -155,11 +164,11 @@ void main() {
       ],
       verify: (_) {
         verify(mockStorageService.getToken()).called(1);
-        verify(mockApiService.getGames(testToken)).called(1);
+        verify(mockApiService.getGames(testToken, date: formattedDate, locationId: testLocationId)).called(1);
         verify(mockStorageService.getGames()).called(1);
         verify(mockStorageService.getLocations()).called(1);
-        verify(mockStorageService.getSelectedDate()).called(1);
-        verify(mockStorageService.getSelectedLocationId()).called(1);
+        verify(mockStorageService.getSelectedDate()).called(2);
+        verify(mockStorageService.getSelectedLocationId()).called(2);
       },
     );
 

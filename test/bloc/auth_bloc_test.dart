@@ -20,6 +20,10 @@ void main() {
   setUp(() {
     mockApiService = MockApiService();
     mockStorageService = MockStorageService();
+
+    // Stub the authStateChanges method
+    when(mockApiService.authStateChanges).thenAnswer((_) => Stream.empty());
+
     authBloc = AuthBloc(
       apiService: mockApiService,
       storageService: mockStorageService,
@@ -228,6 +232,7 @@ void main() {
         return authBloc;
       },
       act: (bloc) => bloc.add(VerifyEmailRequested()),
+      wait: const Duration(milliseconds: 600), // Wait for the 500ms delay in the bloc
       expect: () => [
         isA<AuthLoading>(),
         isA<VerificationSuccess>(),
