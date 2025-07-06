@@ -62,17 +62,49 @@ class Game {
   });
 
   factory Game.fromJson(Map<String, dynamic> json) {
+    // Validate required non-nullable fields
+    final id = json['id'];
+    if (id == null) {
+      throw Exception('Game id cannot be null');
+    }
+
+    final time = json['time'];
+    if (time == null) {
+      throw Exception('Game time cannot be null');
+    }
+
+    final locationId = json['location_id'];
+    if (locationId == null) {
+      throw Exception('Game location_id cannot be null');
+    }
+
+    final dateStr = json['date'];
+    if (dateStr == null) {
+      throw Exception('Game date cannot be null');
+    }
+
+    // Validate team data
+    final team1Data = json['team1'];
+    if (team1Data == null) {
+      throw Exception('Game team1 cannot be null');
+    }
+
+    final team2Data = json['team2'];
+    if (team2Data == null) {
+      throw Exception('Game team2 cannot be null');
+    }
+
     return Game(
-      id: json['id'],
-      time: json['time'],
-      locationId: json['location_id'],
-      team1: Team.fromJson(json['team1']),
-      team2: Team.fromJson(json['team2']),
-      team1Score1: json['team1_score1'],
-      team1Score2: json['team1_score2'],
-      team2Score1: json['team2_score1'],
-      team2Score2: json['team2_score2'],
-      date: DateTime.parse(json['date']),
+      id: id as String,
+      time: time as String,
+      locationId: locationId as String,
+      team1: Team.fromJson(team1Data as Map<String, dynamic>),
+      team2: Team.fromJson(team2Data as Map<String, dynamic>),
+      team1Score1: json['team1_score1'] as int?,
+      team1Score2: json['team1_score2'] as int?,
+      team2Score1: json['team2_score1'] as int?,
+      team2Score2: json['team2_score2'] as int?,
+      date: DateTime.parse(dateStr as String),
     );
   }
 

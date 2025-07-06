@@ -8,6 +8,9 @@ import '../bloc/game/game_event.dart';
 import '../bloc/game/game_state.dart';
 import '../models/game.dart';
 import '../models/location.dart';
+import '../models/player.dart';
+import '../services/api_service.dart';
+import '../services/storage_service.dart';
 
 class GameDetailScreen extends StatefulWidget {
   final Game game;
@@ -30,6 +33,7 @@ class _GameDetailScreenState extends State<GameDetailScreen> with SingleTickerPr
 
   late Game _game;
   Location? _location;
+  Map<String, Player> _players = {};
 
   @override
   void initState() {
@@ -75,6 +79,9 @@ class _GameDetailScreenState extends State<GameDetailScreen> with SingleTickerPr
         orElse: () => Location(id: 'unknown', name: 'Unknown Location'),
       );
     }
+
+    // Load players
+    _loadPlayers();
   }
 
   @override
@@ -85,6 +92,33 @@ class _GameDetailScreenState extends State<GameDetailScreen> with SingleTickerPr
     _team2Score2Controller.dispose();
     _animationController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadPlayers() async {
+    try {
+      final storageService = StorageService();
+      final apiService = ApiService();
+
+      // Try to get players from cache first
+      _players = await storageService.getPlayers();
+
+      // If cache is empty or we want fresh data, fetch from API
+      if (_players.isEmpty) {
+        final token = await storageService.getToken();
+        if (token != null) {
+          _players = await apiService.getPlayers(token);
+          await storageService.savePlayers(_players);
+        }
+      }
+
+      // Update UI if mounted
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      print('Error loading players: $e');
+      // Continue with empty players map - fallback to email-based names
+    }
   }
 
   void _joinTeam(String team) {
@@ -140,7 +174,13 @@ class _GameDetailScreenState extends State<GameDetailScreen> with SingleTickerPr
   String _getPlayerName(String? playerId) {
     if (playerId == null) return 'Empty';
 
-    // In a real app, you would look up the player name from a player repository
+    // Look up the player name from the player repository
+    final player = _players[playerId];
+    if (player != null) {
+      return player.getDisplayName();
+    }
+
+    // Fallback to email-based name if player not found in repository
     return playerId.split('@').first;
   }
 
