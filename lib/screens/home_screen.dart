@@ -6,6 +6,8 @@ import '../bloc/game/game_state.dart';
 import '../platform/platform_service.dart';
 import '../widgets/day_picker.dart';
 import '../widgets/game_list.dart';
+import '../widgets/animated_loading_widget.dart';
+import '../utils/page_transitions.dart';
 import 'game_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -69,7 +71,13 @@ class _HomeScreenState extends State<HomeScreen> {
       body: BlocBuilder<GameBloc, GameState>(
         builder: (context, state) {
           if (state is GameLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: AnimatedLoadingWidget(
+                message: 'Loading games...',
+                primaryColor: Colors.blue,
+                secondaryColor: Colors.blueAccent,
+              ),
+            );
           } else if (state is GamesLoaded) {
             return SafeArea(
               child: Column(
@@ -153,11 +161,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       games: state.games,
                       locations: state.locations,
                       onGameTap: (game) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => GameDetailScreen(game: game),
-                          ),
+                        Navigator.of(context).pushWithFadeScale(
+                          GameDetailScreen(game: game),
                         );
                       },
                     ),
@@ -182,7 +187,13 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             );
           } else {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: AnimatedLoadingWidget(
+                message: 'Initializing...',
+                primaryColor: Colors.blue,
+                secondaryColor: Colors.blueAccent,
+              ),
+            );
           }
         },
       ),

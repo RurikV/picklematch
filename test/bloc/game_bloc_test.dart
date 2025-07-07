@@ -7,6 +7,7 @@ import 'package:picklematch/bloc/game/game_event.dart';
 import 'package:picklematch/bloc/game/game_state.dart';
 import 'package:picklematch/models/game.dart';
 import 'package:picklematch/models/location.dart';
+import 'package:picklematch/models/user.dart';
 import 'package:picklematch/services/api_service.dart';
 import 'package:picklematch/services/storage_service.dart';
 
@@ -240,7 +241,14 @@ void main() {
           team1: Team(player1: 'user-1'),
         );
 
+        final testUser = User(
+          uid: 'user-1',
+          email: 'test@example.com',
+          isActive: true,
+        );
+
         when(mockStorageService.getToken()).thenAnswer((_) async => testToken);
+        when(mockStorageService.getUser()).thenAnswer((_) async => testUser);
         when(mockApiService.joinGame(
           testToken,
           'game-1',
@@ -261,6 +269,7 @@ void main() {
       ],
       verify: (_) {
         verify(mockStorageService.getToken()).called(1);
+        verify(mockStorageService.getUser()).called(1);
         verify(mockApiService.joinGame(
           testToken,
           'game-1',

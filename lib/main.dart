@@ -7,6 +7,8 @@ import 'package:picklematch/bloc/auth/auth_state.dart';
 import 'package:picklematch/bloc/game/game_bloc.dart';
 import 'package:picklematch/screens/login_screen.dart';
 import 'package:picklematch/screens/verification_screen.dart';
+import 'package:picklematch/widgets/animated_loading_widget.dart';
+import 'package:picklematch/widgets/rive_animation_widget.dart';
 import 'screens/main_navigation_screen.dart';
 import 'package:picklematch/services/api_service.dart';
 import 'package:picklematch/services/storage_service.dart';
@@ -97,9 +99,16 @@ class AppNavigator extends StatelessWidget {
         print('AppNavigator: BlocBuilder received state: ${state.runtimeType}');
         if (state is AuthInitial || state is AuthLoading) {
           print('AppNavigator: Showing loading screen for ${state.runtimeType}');
-          return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
+          return Scaffold(
+            body: AnimatedBackgroundWidget(
+              child: const Center(
+                child: AnimatedLoadingWidget(
+                  message: 'Loading PickleMatch...',
+                  primaryColor: Colors.blue,
+                  secondaryColor: Colors.blueAccent,
+                  size: 120.0,
+                ),
+              ),
             ),
           );
         } else if (state is AuthAuthenticated) {
