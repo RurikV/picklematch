@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/auth/auth_bloc.dart';
 import '../bloc/auth/auth_event.dart';
 import '../bloc/auth/auth_state.dart';
+import '../widgets/device_features_widget.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -114,6 +115,20 @@ class ProfileScreen extends StatelessWidget {
                             // Navigate to help & support
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Help & Support coming soon')),
+                            );
+                          },
+                        ),
+                        const Divider(height: 1),
+                        ListTile(
+                          leading: const Icon(Icons.developer_mode),
+                          title: const Text('Device Features'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () {
+                            // Navigate to device features
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => const DeviceFeaturesWidget(),
+                              ),
                             );
                           },
                         ),

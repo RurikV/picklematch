@@ -12,6 +12,7 @@ import 'package:picklematch/widgets/rive_animation_widget.dart';
 import 'screens/main_navigation_screen.dart';
 import 'package:picklematch/services/api_service.dart';
 import 'package:picklematch/services/storage_service.dart';
+import 'package:picklematch/platform/platform_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,13 +24,18 @@ void main() async {
   final apiService = ApiService();
   await apiService.initialize();
 
-  runApp(MyApp(apiService: apiService));
+  // Initialize platform service
+  final platformService = PlatformService();
+  await platformService.initialize();
+
+  runApp(MyApp(apiService: apiService, platformService: platformService));
 }
 
 class MyApp extends StatelessWidget {
   final ApiService apiService;
+  final PlatformService platformService;
 
-  const MyApp({super.key, required this.apiService});
+  const MyApp({super.key, required this.apiService, required this.platformService});
 
   @override
   Widget build(BuildContext context) {
@@ -40,6 +46,9 @@ class MyApp extends StatelessWidget {
         ),
         RepositoryProvider<StorageService>(
           create: (context) => StorageService(),
+        ),
+        RepositoryProvider<PlatformService>(
+          create: (context) => platformService,
         ),
       ],
       child: MultiBlocProvider(
