@@ -11,6 +11,7 @@ import '../models/location.dart';
 import '../bloc/game/game_bloc.dart';
 import '../bloc/game/game_state.dart';
 import '../bloc/game/game_event.dart';
+import 'tournament_registration_screen.dart';
 
 class TournamentManagementScreen extends StatefulWidget {
   const TournamentManagementScreen({super.key});
@@ -212,6 +213,22 @@ class _TournamentCard extends StatelessWidget {
                       foregroundColor: Colors.white,
                     ),
                   ),
+                if (tournament.games.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => TournamentGamesScreen(tournament: tournament),
+                      ),
+                    ),
+                    icon: const Icon(Icons.sports_tennis, size: 16),
+                    label: const Text('View Games'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.purple,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
                 const Spacer(),
                 IconButton(
                   onPressed: () => _showTournamentDetails(context, tournament),
@@ -298,6 +315,18 @@ class _TournamentCard extends StatelessWidget {
           ],
         ),
         actions: [
+          if (tournament.games.isNotEmpty)
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => TournamentGamesScreen(tournament: tournament),
+                  ),
+                );
+              },
+              child: const Text('View Games'),
+            ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Close'),

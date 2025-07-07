@@ -7,6 +7,9 @@ import '../bloc/tournament/tournament_state.dart';
 import '../bloc/auth/auth_bloc.dart';
 import '../bloc/auth/auth_state.dart';
 import '../models/tournament.dart';
+import '../models/player.dart';
+import '../models/game.dart';
+import '../services/firebase_service.dart';
 
 class TournamentRegistrationScreen extends StatefulWidget {
   const TournamentRegistrationScreen({super.key});
@@ -403,6 +406,18 @@ class _TournamentCard extends StatelessWidget {
                       style: const TextStyle(color: Colors.grey),
                     ),
                   ),
+                if (tournament.games.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: () => _showTournamentGames(context),
+                    icon: const Icon(Icons.sports_tennis, size: 16),
+                    label: const Text('View Games'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
                 const Spacer(),
                 IconButton(
                   onPressed: () => _showTournamentDetails(context),
@@ -475,11 +490,27 @@ class _TournamentCard extends StatelessWidget {
           ),
         ),
         actions: [
+          if (tournament.games.isNotEmpty)
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _showTournamentGames(context);
+              },
+              child: const Text('View Games'),
+            ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Close'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showTournamentGames(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => TournamentGamesScreen(tournament: tournament),
       ),
     );
   }
@@ -524,6 +555,274 @@ class _StatusChip extends StatelessWidget {
         style: const TextStyle(color: Colors.white, fontSize: 12),
       ),
       backgroundColor: color,
+    );
+  }
+}
+
+class TournamentGamesScreen extends StatefulWidget {
+  final Tournament tournament;
+
+  const TournamentGamesScreen({super.key, required this.tournament});
+
+  @override
+  _TournamentGamesScreenState createState() => _TournamentGamesScreenState();
+}
+
+class _TournamentGamesScreenState extends State<TournamentGamesScreen> {
+  final Map<String, Player> _players = {};
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlayerData();
+  }
+
+  Future<void> _loadPlayerData() async {
+    try {
+      final firebaseService = FirebaseService();
+
+      // Get all unique player UIDs from tournament games
+      final Set<String> playerUids = {};
+      for (final game in widget.tournament.games) {
+        if (game.team1.player1 != null) playerUids.add(game.team1.player1!);
+        if (game.team1.player2 != null) playerUids.add(game.team1.player2!);
+        if (game.team2.player1 != null) playerUids.add(game.team2.player1!);
+        if (game.team2.player2 != null) playerUids.add(game.team2.player2!);
+      }
+
+      // Load player data for each UID
+      for (final uid in playerUids) {
+        try {
+          final player = await firebaseService.getPlayer(uid);
+          if (player != null) {
+            _players[uid] = player;
+          }
+        } catch (e) {
+          print('Error loading player $uid: $e');
+        }
+      }
+    } catch (e) {
+      print('Error loading player data: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  String _getPlayerName(String? playerId) {
+    if (playerId == null) return 'Empty';
+
+    final player = _players[playerId];
+    if (player != null) {
+      return player.getDisplayName();
+    }
+
+    // Fallback logic similar to game_list.dart
+    if (playerId.contains('@')) {
+      return playerId.split('@').first;
+    }
+
+    if (playerId.length > 10) {
+      return 'User ${playerId.substring(0, 8)}';
+    }
+
+    return 'User $playerId';
+  }
+
+  String _getTeamNames(Team team) {
+    final player1 = _getPlayerName(team.player1);
+    final player2 = _getPlayerName(team.player2);
+    return '$player1 / $player2';
+  }
+
+  String _getScoreText(TournamentGame game) {
+    if (game.team1Score1 == null || game.team1Score2 == null || 
+        game.team2Score1 == null || game.team2Score2 == null) {
+      return 'No scores';
+    }
+
+    return '${game.team1Score1}-${game.team2Score1}, ${game.team1Score2}-${game.team2Score2}';
+  }
+
+  Color _getStatusColor(GameStatus status) {
+    switch (status) {
+      case GameStatus.scheduled:
+        return Colors.blue;
+      case GameStatus.inProgress:
+        return Colors.orange;
+      case GameStatus.completed:
+        return Colors.green;
+      case GameStatus.cancelled:
+        return Colors.red;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('${widget.tournament.name} - Games'),
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : widget.tournament.games.isEmpty
+              ? const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.sports_tennis, size: 64, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text(
+                        'No games scheduled yet',
+                        style: TextStyle(fontSize: 18, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: widget.tournament.games.length,
+                  itemBuilder: (context, index) {
+                    final game = widget.tournament.games[index];
+                    return _buildGameCard(game);
+                  },
+                ),
+    );
+  }
+
+  Widget _buildGameCard(TournamentGame game) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Game header with time, court, and status
+            Row(
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.access_time, size: 16, color: Colors.blue),
+                      const SizedBox(width: 4),
+                      Text(
+                        game.timeSlot,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(width: 16),
+                      const Icon(Icons.sports_tennis, size: 16, color: Colors.blue),
+                      const SizedBox(width: 4),
+                      Text('Court ${game.courtNumber}'),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(game.status),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    game.status.name.toUpperCase(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Teams and scores
+            Row(
+              children: [
+                // Team 1
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Team 1',
+                        style: TextStyle(
+                          color: Colors.blue.shade700,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _getTeamNames(game.team1),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+
+                // VS and scores
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'VS',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _getScoreText(game),
+                        style: const TextStyle(fontSize: 12),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Team 2
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        'Team 2',
+                        style: TextStyle(
+                          color: Colors.red.shade700,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _getTeamNames(game.team2),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.right,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
