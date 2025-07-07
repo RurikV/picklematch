@@ -147,6 +147,7 @@ class ProfileScreen extends StatelessWidget {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
                         foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       ),
                       onPressed: () {
                         context.read<AuthBloc>().add(LoggedOut());

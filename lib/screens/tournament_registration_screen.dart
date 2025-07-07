@@ -430,6 +430,7 @@ class _TournamentCard extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                       foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     ),
                   ),
                 if (isRegistered && tournament.status == TournamentStatus.open)
@@ -440,6 +441,7 @@ class _TournamentCard extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,
                       foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     ),
                   ),
                 if (tournament.status != TournamentStatus.open)
@@ -469,6 +471,7 @@ class _TournamentCard extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
                       foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     ),
                   ),
                 ],

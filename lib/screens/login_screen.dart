@@ -106,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                           label: const Text('Copy'),
                           style: ElevatedButton.styleFrom(
                             minimumSize: const Size(0, 32),
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           ),
                         ),
                       ),
@@ -149,7 +149,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                       label: const Text('Copy'),
                       style: ElevatedButton.styleFrom(
                         minimumSize: const Size(0, 32),
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       ),
                     ),
                   ],
@@ -450,6 +450,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                 minimumSize: const Size.fromHeight(50),
                 backgroundColor: Colors.white,
                 foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8.0),
                   side: const BorderSide(color: Colors.grey),
