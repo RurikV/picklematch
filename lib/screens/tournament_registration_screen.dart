@@ -91,6 +91,10 @@ class _TournamentRegistrationScreenState extends State<TournamentRegistrationScr
             );
             // Reload tournaments after successful unregistration
             _loadTournaments();
+          } else if (state is TournamentGameScoresUpdated) {
+            // Handle game scores updated state to prevent infinite loading
+            // when returning from games screen after saving scores
+            _loadTournaments();
           } else if (state is TournamentError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -735,6 +739,9 @@ class _TournamentGamesScreenState extends State<TournamentGamesScreen> {
               backgroundColor: Colors.red,
             ),
           );
+        } else if (state is TournamentOperationInProgress) {
+          // Handle the loading state - no action needed as the UI will show the updated tournament data
+          // This prevents infinite loading by acknowledging the state
         }
       },
       child: Scaffold(
@@ -883,6 +890,9 @@ class _TournamentGamesScreenState extends State<TournamentGamesScreen> {
               team1Score2Controller.text,
               team2Score1Controller.text,
               team2Score2Controller.text,
+            ),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
             child: const Text('Save Scores'),
           ),
