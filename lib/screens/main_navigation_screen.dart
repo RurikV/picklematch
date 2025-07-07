@@ -5,6 +5,7 @@ import '../bloc/auth/auth_state.dart';
 import 'home_screen.dart';
 import 'create_game_screen.dart';
 import 'tournament_management_screen.dart';
+import 'tournament_registration_screen.dart';
 import 'profile_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
@@ -28,6 +29,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           final List<Widget> screens = [
             const HomeScreen(),
             if (isAdmin) const CreateGameScreen(),
+            const TournamentRegistrationScreen(),
             if (isAdmin) const TournamentManagementScreen(),
             const ProfileScreen(),
           ];
@@ -43,10 +45,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 icon: Icon(Icons.add_circle),
                 label: 'Create Game',
               ),
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.emoji_events),
+              label: 'Tournaments',
+            ),
             if (isAdmin)
               const BottomNavigationBarItem(
-                icon: Icon(Icons.emoji_events),
-                label: 'Tournaments',
+                icon: Icon(Icons.settings),
+                label: 'Manage',
               ),
             const BottomNavigationBarItem(
               icon: Icon(Icons.person),
