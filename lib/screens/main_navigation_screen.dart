@@ -4,6 +4,7 @@ import '../bloc/auth/auth_bloc.dart';
 import '../bloc/auth/auth_state.dart';
 import 'home_screen.dart';
 import 'create_game_screen.dart';
+import 'tournament_management_screen.dart';
 import 'profile_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
@@ -15,21 +16,22 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
-  
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         if (state is AuthAuthenticated) {
           final isAdmin = state.user.role == 'admin';
-          
+
           // Define the screens for navigation
           final List<Widget> screens = [
             const HomeScreen(),
             if (isAdmin) const CreateGameScreen(),
+            if (isAdmin) const TournamentManagementScreen(),
             const ProfileScreen(),
           ];
-          
+
           // Define the navigation items
           final List<BottomNavigationBarItem> navItems = [
             const BottomNavigationBarItem(
@@ -41,15 +43,20 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 icon: Icon(Icons.add_circle),
                 label: 'Create Game',
               ),
+            if (isAdmin)
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.emoji_events),
+                label: 'Tournaments',
+              ),
             const BottomNavigationBarItem(
               icon: Icon(Icons.person),
               label: 'Profile',
             ),
           ];
-          
+
           // Ensure selected index is valid
           final validIndex = _selectedIndex < screens.length ? _selectedIndex : 0;
-          
+
           return Scaffold(
             body: IndexedStack(
               index: validIndex,

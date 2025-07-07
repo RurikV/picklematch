@@ -6,6 +6,9 @@ import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'firebase_config.dart';
+import '../models/tournament.dart';
+import '../models/user.dart' as models;
+import '../models/player.dart';
 
 // Mock classes for development fallback
 class MockUser implements User {
@@ -1001,5 +1004,100 @@ class FirebaseService {
 
   // Auth state changes
   Stream<User?> get authStateChanges => _auth.authStateChanges();
+
+  // Tournament methods
+  Future<bool> saveTournament(Tournament tournament) async {
+    try {
+      if (_auth.currentUser == null) {
+        print('FirebaseService: No authenticated user for saveTournament');
+        throw Exception('User not authenticated. Please log in to save tournaments.');
+      }
+
+      print('FirebaseService: Saving tournament: ${tournament.name}');
+      await _firestore.collection('tournaments').doc(tournament.id).set(tournament.toJson());
+      print('FirebaseService: Successfully saved tournament with ID: ${tournament.id}');
+      return true;
+    } catch (e) {
+      print('FirebaseService: Error saving tournament: $e');
+      return false;
+    }
+  }
+
+  Future<Tournament?> getTournament(String tournamentId) async {
+    try {
+      if (_auth.currentUser == null) {
+        print('FirebaseService: No authenticated user for getTournament');
+        return null;
+      }
+
+      print('FirebaseService: Getting tournament: $tournamentId');
+      DocumentSnapshot snapshot = await _firestore.collection('tournaments').doc(tournamentId).get();
+
+      if (snapshot.exists) {
+        print('FirebaseService: Tournament found');
+        return Tournament.fromJson(snapshot.data() as Map<String, dynamic>);
+      } else {
+        print('FirebaseService: Tournament not found');
+        return null;
+      }
+    } catch (e) {
+      print('FirebaseService: Error getting tournament: $e');
+      return null;
+    }
+  }
+
+  Future<List<Tournament>> getAllTournaments() async {
+    try {
+      if (_auth.currentUser == null) {
+        print('FirebaseService: No authenticated user for getAllTournaments');
+        return [];
+      }
+
+      print('FirebaseService: Getting all tournaments');
+      QuerySnapshot snapshot = await _firestore.collection('tournaments').get();
+
+      List<Tournament> tournaments = [];
+      for (var doc in snapshot.docs) {
+        try {
+          tournaments.add(Tournament.fromJson(doc.data() as Map<String, dynamic>));
+        } catch (e) {
+          print('FirebaseService: Error parsing tournament ${doc.id}: $e');
+        }
+      }
+
+      print('FirebaseService: Found ${tournaments.length} tournaments');
+      return tournaments;
+    } catch (e) {
+      print('FirebaseService: Error getting all tournaments: $e');
+      return [];
+    }
+  }
+
+  // User and Player helper methods for tournament service
+  Future<models.User?> getUser(String uid) async {
+    try {
+      final userData = await getUserData(uid);
+      if (userData != null) {
+        return models.User.fromJson(userData);
+      }
+      return null;
+    } catch (e) {
+      print('FirebaseService: Error getting user: $e');
+      return null;
+    }
+  }
+
+  Future<Player?> getPlayer(String uid) async {
+    try {
+      final userData = await getUserData(uid);
+      if (userData != null) {
+        return Player.fromJson(userData);
+      }
+      return null;
+    } catch (e) {
+      print('FirebaseService: Error getting player: $e');
+      return null;
+    }
+  }
 
 }

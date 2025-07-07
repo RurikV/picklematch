@@ -5,6 +5,7 @@ import 'package:picklematch/bloc/auth/auth_bloc.dart';
 import 'package:picklematch/bloc/auth/auth_event.dart';
 import 'package:picklematch/bloc/auth/auth_state.dart';
 import 'package:picklematch/bloc/game/game_bloc.dart';
+import 'package:picklematch/bloc/tournament/tournament_bloc.dart';
 import 'package:picklematch/screens/login_screen.dart';
 import 'package:picklematch/screens/verification_screen.dart';
 import 'package:picklematch/widgets/animated_loading_widget.dart';
@@ -64,6 +65,9 @@ class MyApp extends StatelessWidget {
               apiService: context.read<ApiService>(),
               storageService: context.read<StorageService>(),
             ),
+          ),
+          BlocProvider<TournamentBloc>(
+            create: (context) => TournamentBloc(),
           ),
         ],
         child: MaterialApp(
