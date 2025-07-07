@@ -1,8 +1,5 @@
-import 'dart:convert';
 import '../models/tournament.dart';
 import '../models/player.dart';
-import '../models/user.dart';
-import '../models/location.dart';
 import 'tournament_matching_isolate.dart';
 import 'firebase_service.dart';
 
@@ -88,7 +85,7 @@ class TournamentService {
     try {
       final tournaments = await _firebaseService.getAllTournaments();
       final player = await _firebaseService.getPlayer(playerId);
-      
+
       return tournaments.where((tournament) {
         return tournament.status == TournamentStatus.open &&
                tournament.canRegister(player?.rating) &&
@@ -191,7 +188,7 @@ class TournamentService {
 
       // Generate teams using the isolate
       final teams = await TournamentMatchingService.generateTeams(players);
-      
+
       if (teams.isEmpty) {
         throw Exception('Could not generate teams from registered players');
       }
@@ -325,6 +322,57 @@ class TournamentService {
       return await _firebaseService.saveTournament(tournament);
     } catch (e) {
       print('Error updating tournament: $e');
+      return false;
+    }
+  }
+
+  /// Update tournament game scores
+  Future<bool> updateTournamentGameScores({
+    required String tournamentId,
+    required String gameId,
+    required int team1Score1,
+    required int team1Score2,
+    required int team2Score1,
+    required int team2Score2,
+    required String userId,
+  }) async {
+    try {
+      final tournament = await _firebaseService.getTournament(tournamentId);
+      if (tournament == null) {
+        throw Exception('Tournament not found');
+      }
+
+      // Verify user is admin or tournament creator
+      final user = await _firebaseService.getUser(userId);
+      if (user?.role != 'admin' && tournament.createdBy != userId) {
+        throw Exception('Only admin users can update game scores');
+      }
+
+      // Find the game to update
+      final gameIndex = tournament.games.indexWhere((game) => game.id == gameId);
+      if (gameIndex == -1) {
+        throw Exception('Game not found in tournament');
+      }
+
+      // Update the game with new scores
+      final updatedGame = tournament.games[gameIndex].copyWith(
+        team1Score1: team1Score1,
+        team1Score2: team1Score2,
+        team2Score1: team2Score1,
+        team2Score2: team2Score2,
+        status: GameStatus.completed, // Mark game as completed when scores are added
+      );
+
+      // Create updated games list
+      final updatedGames = List<TournamentGame>.from(tournament.games);
+      updatedGames[gameIndex] = updatedGame;
+
+      // Update tournament with new games
+      final updatedTournament = tournament.copyWith(games: updatedGames);
+
+      return await _firebaseService.saveTournament(updatedTournament);
+    } catch (e) {
+      print('Error updating tournament game scores: $e');
       return false;
     }
   }

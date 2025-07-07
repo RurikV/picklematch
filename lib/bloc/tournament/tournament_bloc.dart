@@ -10,7 +10,7 @@ class TournamentBloc extends Bloc<TournamentEvent, TournamentState> {
   TournamentBloc() 
     : _tournamentService = TournamentService(FirebaseService()),
       super(TournamentInitial()) {
-    
+
     on<LoadTournaments>(_onLoadTournaments);
     on<LoadTournamentsByAdmin>(_onLoadTournamentsByAdmin);
     on<LoadOpenTournaments>(_onLoadOpenTournaments);
@@ -24,6 +24,7 @@ class TournamentBloc extends Bloc<TournamentEvent, TournamentState> {
     on<CancelTournament>(_onCancelTournament);
     on<UpdateTournament>(_onUpdateTournament);
     on<LoadTournamentDetails>(_onLoadTournamentDetails);
+    on<UpdateTournamentGameScores>(_onUpdateTournamentGameScores);
   }
 
   Future<void> _onLoadTournaments(
@@ -84,7 +85,7 @@ class TournamentBloc extends Bloc<TournamentEvent, TournamentState> {
   ) async {
     try {
       emit(TournamentOperationInProgress('Creating tournament...'));
-      
+
       final tournament = await _tournamentService.createTournament(
         name: event.name,
         description: event.description,
@@ -113,7 +114,7 @@ class TournamentBloc extends Bloc<TournamentEvent, TournamentState> {
   ) async {
     try {
       emit(TournamentOperationInProgress('Registering for tournament...'));
-      
+
       final success = await _tournamentService.registerPlayer(
         event.tournamentId,
         event.playerId,
@@ -135,7 +136,7 @@ class TournamentBloc extends Bloc<TournamentEvent, TournamentState> {
   ) async {
     try {
       emit(TournamentOperationInProgress('Unregistering from tournament...'));
-      
+
       final success = await _tournamentService.unregisterPlayer(
         event.tournamentId,
         event.playerId,
@@ -157,7 +158,7 @@ class TournamentBloc extends Bloc<TournamentEvent, TournamentState> {
   ) async {
     try {
       emit(TournamentOperationInProgress('Generating tournament matches...'));
-      
+
       final success = await _tournamentService.generateTournamentMatches(
         event.tournamentId,
         event.adminUserId,
@@ -184,7 +185,7 @@ class TournamentBloc extends Bloc<TournamentEvent, TournamentState> {
   ) async {
     try {
       emit(TournamentOperationInProgress('Starting tournament...'));
-      
+
       final success = await _tournamentService.startTournament(
         event.tournamentId,
         event.adminUserId,
@@ -211,7 +212,7 @@ class TournamentBloc extends Bloc<TournamentEvent, TournamentState> {
   ) async {
     try {
       emit(TournamentOperationInProgress('Completing tournament...'));
-      
+
       final success = await _tournamentService.completeTournament(
         event.tournamentId,
         event.adminUserId,
@@ -238,7 +239,7 @@ class TournamentBloc extends Bloc<TournamentEvent, TournamentState> {
   ) async {
     try {
       emit(TournamentOperationInProgress('Cancelling tournament...'));
-      
+
       final success = await _tournamentService.cancelTournament(
         event.tournamentId,
         event.adminUserId,
@@ -265,7 +266,7 @@ class TournamentBloc extends Bloc<TournamentEvent, TournamentState> {
   ) async {
     try {
       emit(TournamentOperationInProgress('Updating tournament...'));
-      
+
       final success = await _tournamentService.updateTournament(
         event.tournament,
         event.adminUserId,
@@ -287,9 +288,9 @@ class TournamentBloc extends Bloc<TournamentEvent, TournamentState> {
   ) async {
     try {
       emit(TournamentLoading());
-      
+
       final tournament = await _tournamentService.getTournament(event.tournamentId);
-      
+
       if (tournament != null) {
         emit(TournamentDetailsLoaded(tournament));
       } else {
@@ -297,6 +298,38 @@ class TournamentBloc extends Bloc<TournamentEvent, TournamentState> {
       }
     } catch (e) {
       emit(TournamentError('Failed to load tournament details: ${e.toString()}'));
+    }
+  }
+
+  Future<void> _onUpdateTournamentGameScores(
+    UpdateTournamentGameScores event,
+    Emitter<TournamentState> emit,
+  ) async {
+    try {
+      emit(TournamentOperationInProgress('Updating game scores...'));
+
+      final success = await _tournamentService.updateTournamentGameScores(
+        tournamentId: event.tournamentId,
+        gameId: event.gameId,
+        team1Score1: event.team1Score1,
+        team1Score2: event.team1Score2,
+        team2Score1: event.team2Score1,
+        team2Score2: event.team2Score2,
+        userId: event.userId,
+      );
+
+      if (success) {
+        final tournament = await _tournamentService.getTournament(event.tournamentId);
+        if (tournament != null) {
+          emit(TournamentGameScoresUpdated(tournament));
+        } else {
+          emit(TournamentError('Game scores updated but failed to reload tournament'));
+        }
+      } else {
+        emit(TournamentError('Failed to update game scores'));
+      }
+    } catch (e) {
+      emit(TournamentError('Failed to update game scores: ${e.toString()}'));
     }
   }
 }

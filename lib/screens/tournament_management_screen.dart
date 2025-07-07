@@ -64,8 +64,23 @@ class _TournamentList extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<TournamentBloc, TournamentState>(
       builder: (context, state) {
-        if (state is TournamentLoading) {
-          return const Center(child: CircularProgressIndicator());
+        if (state is TournamentLoading || state is TournamentOperationInProgress) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const CircularProgressIndicator(),
+                if (state is TournamentOperationInProgress) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    state.operation,
+                    style: const TextStyle(fontSize: 16),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ],
+            ),
+          );
         } else if (state is TournamentLoaded) {
           if (state.tournaments.isEmpty) {
             return const Center(
@@ -96,6 +111,20 @@ class _TournamentList extends StatelessWidget {
               return _TournamentCard(tournament: tournament);
             },
           );
+        } else if (state is TournamentMatchesGenerated || 
+                   state is TournamentStarted || 
+                   state is TournamentCompleted || 
+                   state is TournamentCancelled ||
+                   state is TournamentCreated ||
+                   state is TournamentUpdated) {
+          // For these states, reload the tournament list to show updated data
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            final authState = context.read<AuthBloc>().state;
+            if (authState is AuthAuthenticated) {
+              context.read<TournamentBloc>().add(LoadTournamentsByAdmin(authState.user.uid));
+            }
+          });
+          return const Center(child: CircularProgressIndicator());
         } else if (state is TournamentError) {
           return Center(
             child: Column(
@@ -123,7 +152,8 @@ class _TournamentList extends StatelessWidget {
           );
         }
 
-        return const Center(child: Text('Unknown state'));
+        // Handle any remaining states by showing loading
+        return const Center(child: CircularProgressIndicator());
       },
     );
   }

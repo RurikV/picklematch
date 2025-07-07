@@ -186,6 +186,34 @@ class TournamentGame {
       'status': status.name,
     };
   }
+
+  TournamentGame copyWith({
+    String? id,
+    String? tournamentId,
+    String? timeSlot,
+    int? courtNumber,
+    Team? team1,
+    Team? team2,
+    int? team1Score1,
+    int? team1Score2,
+    int? team2Score1,
+    int? team2Score2,
+    GameStatus? status,
+  }) {
+    return TournamentGame(
+      id: id ?? this.id,
+      tournamentId: tournamentId ?? this.tournamentId,
+      timeSlot: timeSlot ?? this.timeSlot,
+      courtNumber: courtNumber ?? this.courtNumber,
+      team1: team1 ?? this.team1,
+      team2: team2 ?? this.team2,
+      team1Score1: team1Score1 ?? this.team1Score1,
+      team1Score2: team1Score2 ?? this.team1Score2,
+      team2Score1: team2Score1 ?? this.team2Score1,
+      team2Score2: team2Score2 ?? this.team2Score2,
+      status: status ?? this.status,
+    );
+  }
 }
 
 enum TournamentStatus {

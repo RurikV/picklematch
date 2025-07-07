@@ -118,3 +118,23 @@ class LoadTournamentDetails extends TournamentEvent {
 
   LoadTournamentDetails(this.tournamentId);
 }
+
+class UpdateTournamentGameScores extends TournamentEvent {
+  final String tournamentId;
+  final String gameId;
+  final int team1Score1;
+  final int team1Score2;
+  final int team2Score1;
+  final int team2Score2;
+  final String userId;
+
+  UpdateTournamentGameScores({
+    required this.tournamentId,
+    required this.gameId,
+    required this.team1Score1,
+    required this.team1Score2,
+    required this.team2Score1,
+    required this.team2Score2,
+    required this.userId,
+  });
+}

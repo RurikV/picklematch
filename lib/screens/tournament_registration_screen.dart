@@ -121,8 +121,23 @@ class _AvailableTournamentsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<TournamentBloc, TournamentState>(
       builder: (context, state) {
-        if (state is TournamentLoading) {
-          return const Center(child: CircularProgressIndicator());
+        if (state is TournamentLoading || state is TournamentOperationInProgress) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const CircularProgressIndicator(),
+                if (state is TournamentOperationInProgress) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    state.operation,
+                    style: const TextStyle(fontSize: 16),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ],
+            ),
+          );
         } else if (state is TournamentLoaded) {
           if (state.tournaments.isEmpty) {
             return const Center(
@@ -164,6 +179,15 @@ class _AvailableTournamentsTab extends StatelessWidget {
               },
             ),
           );
+        } else if (state is TournamentRegistrationSuccess || 
+                   state is TournamentUnregistrationSuccess) {
+          // For registration/unregistration success, reload the tournaments
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (currentUserId != null) {
+              context.read<TournamentBloc>().add(LoadOpenTournaments(currentUserId!));
+            }
+          });
+          return const Center(child: CircularProgressIndicator());
         } else if (state is TournamentError) {
           return Center(
             child: Column(
@@ -190,7 +214,8 @@ class _AvailableTournamentsTab extends StatelessWidget {
           );
         }
 
-        return const Center(child: Text('Unknown state'));
+        // Handle any remaining states by showing loading
+        return const Center(child: CircularProgressIndicator());
       },
     );
   }
@@ -205,8 +230,23 @@ class _MyTournamentsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<TournamentBloc, TournamentState>(
       builder: (context, state) {
-        if (state is TournamentLoading) {
-          return const Center(child: CircularProgressIndicator());
+        if (state is TournamentLoading || state is TournamentOperationInProgress) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const CircularProgressIndicator(),
+                if (state is TournamentOperationInProgress) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    state.operation,
+                    style: const TextStyle(fontSize: 16),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ],
+            ),
+          );
         } else if (state is TournamentLoaded) {
           if (state.tournaments.isEmpty) {
             return const Center(
@@ -248,6 +288,15 @@ class _MyTournamentsTab extends StatelessWidget {
               },
             ),
           );
+        } else if (state is TournamentRegistrationSuccess || 
+                   state is TournamentUnregistrationSuccess) {
+          // For registration/unregistration success, reload the tournaments
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (currentUserId != null) {
+              context.read<TournamentBloc>().add(LoadPlayerTournaments(currentUserId!));
+            }
+          });
+          return const Center(child: CircularProgressIndicator());
         } else if (state is TournamentError) {
           return Center(
             child: Column(
@@ -274,7 +323,8 @@ class _MyTournamentsTab extends StatelessWidget {
           );
         }
 
-        return const Center(child: Text('Unknown state'));
+        // Handle any remaining states by showing loading
+        return const Center(child: CircularProgressIndicator());
       },
     );
   }
@@ -571,10 +621,12 @@ class TournamentGamesScreen extends StatefulWidget {
 class _TournamentGamesScreenState extends State<TournamentGamesScreen> {
   final Map<String, Player> _players = {};
   bool _isLoading = true;
+  late Tournament _tournament;
 
   @override
   void initState() {
     super.initState();
+    _tournament = widget.tournament;
     _loadPlayerData();
   }
 
@@ -584,7 +636,7 @@ class _TournamentGamesScreenState extends State<TournamentGamesScreen> {
 
       // Get all unique player UIDs from tournament games
       final Set<String> playerUids = {};
-      for (final game in widget.tournament.games) {
+      for (final game in _tournament.games) {
         if (game.team1.player1 != null) playerUids.add(game.team1.player1!);
         if (game.team1.player2 != null) playerUids.add(game.team1.player2!);
         if (game.team2.player1 != null) playerUids.add(game.team2.player1!);
@@ -663,34 +715,242 @@ class _TournamentGamesScreenState extends State<TournamentGamesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('${widget.tournament.name} - Games'),
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : widget.tournament.games.isEmpty
-              ? const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.sports_tennis, size: 64, color: Colors.grey),
-                      SizedBox(height: 16),
-                      Text(
-                        'No games scheduled yet',
-                        style: TextStyle(fontSize: 18, color: Colors.grey),
-                      ),
-                    ],
+    return BlocListener<TournamentBloc, TournamentState>(
+      listener: (context, state) {
+        if (state is TournamentGameScoresUpdated) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Game scores updated successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          // Update the tournament data
+          setState(() {
+            _tournament = state.tournament;
+          });
+        } else if (state is TournamentError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('${_tournament.name} - Games'),
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _tournament.games.isEmpty
+                ? const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.sports_tennis, size: 64, color: Colors.grey),
+                        SizedBox(height: 16),
+                        Text(
+                          'No games scheduled yet',
+                          style: TextStyle(fontSize: 18, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _tournament.games.length,
+                    itemBuilder: (context, index) {
+                      final game = _tournament.games[index];
+                      return _buildGameCard(game);
+                    },
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: widget.tournament.games.length,
-                  itemBuilder: (context, index) {
-                    final game = widget.tournament.games[index];
-                    return _buildGameCard(game);
-                  },
+      ),
+    );
+  }
+
+  void _showScoreInputDialog(TournamentGame game) {
+    final team1Score1Controller = TextEditingController(
+      text: game.team1Score1?.toString() ?? '',
+    );
+    final team1Score2Controller = TextEditingController(
+      text: game.team1Score2?.toString() ?? '',
+    );
+    final team2Score1Controller = TextEditingController(
+      text: game.team2Score1?.toString() ?? '',
+    );
+    final team2Score2Controller = TextEditingController(
+      text: game.team2Score2?.toString() ?? '',
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Enter Scores - ${game.timeSlot}'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Court ${game.courtNumber}',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+
+              // Team 1 scores
+              Text(
+                'Team 1: ${_getTeamNames(game.team1)}',
+                style: TextStyle(
+                  color: Colors.blue.shade700,
+                  fontWeight: FontWeight.bold,
                 ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: team1Score1Controller,
+                      decoration: const InputDecoration(
+                        labelText: 'Set 1',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextFormField(
+                      controller: team1Score2Controller,
+                      decoration: const InputDecoration(
+                        labelText: 'Set 2',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+
+              // Team 2 scores
+              Text(
+                'Team 2: ${_getTeamNames(game.team2)}',
+                style: TextStyle(
+                  color: Colors.red.shade700,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: team2Score1Controller,
+                      decoration: const InputDecoration(
+                        labelText: 'Set 1',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextFormField(
+                      controller: team2Score2Controller,
+                      decoration: const InputDecoration(
+                        labelText: 'Set 2',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => _updateGameScores(
+              game,
+              team1Score1Controller.text,
+              team1Score2Controller.text,
+              team2Score1Controller.text,
+              team2Score2Controller.text,
+            ),
+            child: const Text('Save Scores'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _updateGameScores(
+    TournamentGame game,
+    String team1Score1Text,
+    String team1Score2Text,
+    String team2Score1Text,
+    String team2Score2Text,
+  ) {
+    // Validate input
+    final team1Score1 = int.tryParse(team1Score1Text);
+    final team1Score2 = int.tryParse(team1Score2Text);
+    final team2Score1 = int.tryParse(team2Score1Text);
+    final team2Score2 = int.tryParse(team2Score2Text);
+
+    if (team1Score1 == null || team1Score2 == null || 
+        team2Score1 == null || team2Score2 == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter valid scores for all sets'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (team1Score1 < 0 || team1Score2 < 0 || team2Score1 < 0 || team2Score2 < 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Scores cannot be negative'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Get current user ID
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! AuthAuthenticated) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You must be logged in to update scores'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Close dialog
+    Navigator.of(context).pop();
+
+    // Update scores via bloc
+    context.read<TournamentBloc>().add(
+      UpdateTournamentGameScores(
+        tournamentId: _tournament.id,
+        gameId: game.id,
+        team1Score1: team1Score1,
+        team1Score2: team1Score2,
+        team2Score1: team2Score1,
+        team2Score2: team2Score2,
+        userId: authState.user.uid,
+      ),
     );
   }
 
@@ -771,28 +1031,41 @@ class _TournamentGamesScreenState extends State<TournamentGamesScreen> {
                 ),
 
                 // VS and scores
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    children: [
-                      const Text(
-                        'VS',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey,
+                GestureDetector(
+                  onTap: () => _showScoreInputDialog(game),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.blue.shade300,
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        const Text(
+                          'VS',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _getScoreText(game),
-                        style: const TextStyle(fontSize: 12),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+                        const SizedBox(height: 4),
+                        Text(
+                          _getScoreText(game),
+                          style: const TextStyle(fontSize: 12),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 2),
+                        const Icon(
+                          Icons.edit,
+                          size: 12,
+                          color: Colors.blue,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
 
